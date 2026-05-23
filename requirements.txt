@@ -1,0 +1,20 @@
+# Web framework
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# AI email generation
+anthropic>=0.28.0
+
+# HTTP (Proxycurl + Google Search + Hunter.io)
+requests>=2.31.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Gmail API (optional — for saving to Gmail Drafts)
+google-api-python-client>=2.100.0
+google-auth-oauthlib>=1.1.0
+google-auth-httplib2>=0.1.1
+
+# Email DNS verification (optional)
+dnspython>=2.4.0

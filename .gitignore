@@ -1,0 +1,21 @@
+# API keys — never commit this
+.env
+gmail_token.json
+gmail_credentials.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+*.egg-info/
+
+# Local output files
+drafts/
+hunt_*.json
+
+# macOS
+.DS_Store
+
+# Replit local cache
+.replit.local
