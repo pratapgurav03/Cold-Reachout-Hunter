@@ -4,127 +4,174 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cold Reachout Hunter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
-    --sidebar-bg: #0f172a;
-    --sidebar-hover: #1e293b;
-    --sidebar-active: #1d4ed8;
-    --accent: #3b82f6;
-    --accent-hover: #2563eb;
+    /* Brand — Essence Drive-In: deep indigo + hot pink */
+    --purple: #3730b8;
+    --purple-light: #4f46e5;
+    --purple-dim: rgba(255,255,255,0.07);
+    --purple-glow: rgba(240,64,181,0.25);
+    --lime: #f040b5;
+    --lime-dark: #db2777;
+    --lime-text: #ffffff;
+
+    /* Sidebar */
+    --sidebar-bg: #08083a;
+    --sidebar-hover: rgba(240,64,181,0.1);
+    --sidebar-active: rgba(240,64,181,0.15);
+    --sidebar-border: rgba(255,255,255,0.07);
+
+    /* Semantic */
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #ef4444;
-    --text-primary: #0f172a;
-    --text-secondary: #64748b;
-    --border: #e2e8f0;
-    --bg-page: #f1f5f9;
-    --bg-card: #ffffff;
-    --bg-input: #f8fafc;
+
+    /* Page — dark indigo */
+    --bg-page: #0e0e52;
+    --bg-card: #16166a;
+    --bg-input: #1e1e7a;
+    --border: rgba(255,255,255,0.1);
+    --shadow-card: 0 4px 24px rgba(0,0,0,0.4);
+    --shadow-hover: 0 8px 32px rgba(0,0,0,0.5);
+
+    /* Text — white on dark */
+    --text-primary: #ffffff;
+    --text-secondary: #b0b0e0;
+    --text-muted: #7070b0;
+
+    /* Compat aliases */
+    --accent: var(--purple);
+    --accent-hover: #4f46e5;
+
+    /* Fonts */
+    --font-display: 'DM Serif Display', Georgia, serif;
+    --font-display-condensed: 'Barlow Condensed', sans-serif;
+    --font-body: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'Space Mono', 'Courier New', monospace;
   }
 
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg-page); color: var(--text-primary); display: flex; height: 100vh; overflow: hidden; }
+  body { font-family: var(--font-body); background: var(--bg-page); color: var(--text-primary); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-  /* ─── SIDEBAR ─── */
-  .sidebar { width: 240px; min-width: 240px; background: var(--sidebar-bg); display: flex; flex-direction: column; padding: 0; overflow: hidden; }
-
-  .sidebar-brand { padding: 24px 20px 20px; border-bottom: 1px solid #1e293b; }
-  .sidebar-brand h1 { color: #fff; font-size: 15px; font-weight: 700; line-height: 1.3; }
-  .sidebar-brand p { color: #64748b; font-size: 11px; margin-top: 4px; }
-
-  .config-status { padding: 12px 20px; border-bottom: 1px solid #1e293b; }
-  .config-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
-  .config-dot.ok { background: var(--success); }
+  /* ─── TOP NAV ─── */
+  .topnav { background: rgba(8,8,58,0.97); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.07); padding: 0 48px; height: 64px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; z-index: 100; position: relative; }
+  .nav-logo { font-family: var(--font-display-condensed); font-size: 15px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 0.08em; line-height: 1.1; cursor: pointer; user-select: none; }
+  .nav-logo .pk { color: var(--lime); }
+  .nav-links { display: flex; align-items: center; gap: 2px; }
+  .nav-link { padding: 7px 16px; color: rgba(255,255,255,0.4); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; border-radius: 4px; letter-spacing: 0.01em; border: none; background: none; font-family: var(--font-body); }
+  .nav-link:hover { color: #fff; background: rgba(255,255,255,0.07); }
+  .nav-link.active { color: var(--lime); background: rgba(240,64,181,0.12); }
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+  .config-status { display: flex; align-items: center; gap: 10px; }
+  .config-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+  .config-dot.ok { background: #34d399; box-shadow: 0 0 7px rgba(52,211,153,0.7); }
   .config-dot.warn { background: var(--warning); }
   .config-dot.err { background: var(--danger); }
-  .config-item { display: flex; align-items: center; font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
-
-  .nav { flex: 1; padding: 16px 12px; }
-  .nav-label { font-size: 10px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.08em; padding: 0 8px; margin-bottom: 6px; margin-top: 12px; }
-  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; color: #94a3b8; font-size: 13px; font-weight: 500; transition: all 0.15s; margin-bottom: 2px; }
-  .nav-item:hover { background: var(--sidebar-hover); color: #e2e8f0; }
-  .nav-item.active { background: var(--sidebar-active); color: #fff; }
-  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
-
-  .sidebar-footer { padding: 16px 20px; border-top: 1px solid #1e293b; }
-  .sidebar-footer p { color: #475569; font-size: 11px; }
-  .sidebar-footer strong { color: #94a3b8; }
+  .config-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: rgba(255,255,255,0.3); }
+  .sending-as { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.25); border-left: 1px solid rgba(255,255,255,0.1); padding-left: 16px; }
 
   /* ─── MAIN ─── */
   .main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+  .content { padding: 32px 48px; flex: 1; }
 
-  .topbar { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-  .topbar-title { font-size: 16px; font-weight: 600; color: var(--text-primary); }
-  .topbar-sub { font-size: 13px; color: var(--text-secondary); }
+  /* ─── HERO SECTION ─── */
+  @keyframes heroFadeUp { from { opacity:0; transform: translateY(28px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes sectionIn  { from { opacity:0; transform: translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  .section.active { display: block; animation: sectionIn 0.28s ease; }
 
-  .content { padding: 28px 32px; flex: 1; }
+  .hero-section { position: relative; min-height: 54vh; display: flex; align-items: flex-end; overflow: hidden; flex-shrink: 0; }
+  .hero-bg { position: absolute; inset: 0; background-image: url('https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1920&q=80'); background-size: cover; background-position: center 55%; will-change: transform; transition: transform 0.1s linear; }
+  .hero-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(8,8,58,0.94) 0%, rgba(14,14,82,0.7) 55%, rgba(8,8,58,0.92) 100%); }
+  .hero-content { position: relative; z-index: 2; padding: 52px 48px 44px; width: 100%; }
+  .hero-eyebrow { font-size: 11px; font-weight: 700; color: var(--lime); text-transform: uppercase; letter-spacing: 0.22em; margin-bottom: 16px; opacity: 0; animation: heroFadeUp 0.65s 0.2s ease forwards; }
+  .hero-title { font-family: var(--font-display); font-size: clamp(50px, 7vw, 86px); color: #fff; line-height: 1.02; font-style: italic; opacity: 0; animation: heroFadeUp 0.8s 0.45s ease forwards; }
+  .hero-title .pk { color: var(--lime); font-style: normal; }
+  .hero-tagline { font-family: var(--font-mono); font-size: 12px; color: rgba(255,255,255,0.38); margin-top: 20px; display: flex; align-items: center; gap: 14px; opacity: 0; animation: heroFadeUp 0.65s 0.7s ease forwards; }
+  .hero-tagline::before { content: ''; display: inline-block; width: 32px; height: 2px; background: var(--lime); flex-shrink: 0; }
+  .hero-cta { margin-top: 28px; opacity: 0; animation: heroFadeUp 0.65s 0.9s ease forwards; display: flex; gap: 12px; align-items: center; }
+  .hero-stats { position: absolute; right: 0; bottom: 0; display: flex; z-index: 2; }
+  .hero-stat { padding: 16px 26px; background: rgba(8,8,58,0.9); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid rgba(255,255,255,0.08); border-left: 1px solid rgba(255,255,255,0.06); text-align: center; opacity: 0; animation: heroFadeUp 0.5s ease forwards; }
+  .hero-stat:nth-child(1) { animation-delay: 1.0s; }
+  .hero-stat:nth-child(2) { animation-delay: 1.1s; }
+  .hero-stat:nth-child(3) { animation-delay: 1.2s; }
+  .hero-stat-val { font-family: var(--font-display-condensed); font-size: 32px; font-weight: 800; color: #fff; line-height: 1; }
+  .hero-stat-val.pink { color: var(--lime); }
+  .hero-stat-label { font-size: 9px; color: rgba(255,255,255,0.32); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
 
   /* ─── CARDS ─── */
-  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
-  .card-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-  .card-title svg { width: 16px; height: 16px; color: var(--accent); }
+  .card { background: var(--bg-card); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow-card); transition: box-shadow 0.2s; }
+  .card-title { font-family: var(--font-display-condensed); font-size: 20px; font-weight: 800; color: var(--text-primary); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .card-title svg { width: 18px; height: 18px; color: var(--lime); }
 
   /* ─── STATS ROW ─── */
-  .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 20px; }
-  .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
-  .stat-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; margin-bottom: 8px; }
-  .stat-value { font-size: 28px; font-weight: 700; color: var(--text-primary); }
-  .stat-card.accent { border-color: var(--accent); }
-  .stat-card.accent .stat-value { color: var(--accent); }
-  .stat-card.success .stat-value { color: var(--success); }
-  .stat-card.warning .stat-value { color: var(--warning); }
+  .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; margin-bottom: 32px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden; }
+  .stat-card { background: rgba(255,255,255,0.04); padding: 22px 18px; position: relative; overflow: hidden; border-radius: 0; transition: background 0.2s; }
+  .stat-card:hover { background: rgba(255,255,255,0.07); }
+  .stat-card::after { content: attr(data-icon); position: absolute; bottom: -4px; right: 8px; font-size: 44px; opacity: 0.08; line-height: 1; pointer-events: none; }
+  .stat-card.accent { background: rgba(240,64,181,0.15); }
+  .stat-card.success { background: rgba(240,64,181,0.08); }
+  .stat-card.warning { background: var(--lime); }
+  .stat-label { font-size: 9px; color: rgba(255,255,255,0.4); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+  .stat-card.warning .stat-label { color: rgba(255,255,255,0.7); }
+  .stat-value { font-family: var(--font-display-condensed); font-size: 46px; font-weight: 800; color: #fff; line-height: 1; }
+  .stat-card.accent .stat-value { color: var(--lime); }
+  .stat-card.warning .stat-value { color: #fff; }
 
   /* ─── FORM ELEMENTS ─── */
   .form-group { margin-bottom: 16px; }
-  .form-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.04em; }
-  .form-input, .form-select, .form-textarea {
-    width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px;
-    font-size: 14px; color: var(--text-primary); background: var(--bg-input);
-    transition: border-color 0.15s; outline: none; font-family: inherit;
-  }
-  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); background: #fff; }
-  .form-textarea { resize: vertical; min-height: 160px; line-height: 1.6; }
+  .form-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.07em; }
+  .form-input, .form-select, .form-textarea { width: 100%; padding: 10px 14px; border: 1.5px solid rgba(255,255,255,0.12); border-radius: 4px; font-size: 14px; color: #fff; background: rgba(255,255,255,0.06); transition: border-color 0.15s, box-shadow 0.15s; outline: none; font-family: var(--font-body); }
+  .form-input::placeholder, .form-textarea::placeholder { color: rgba(255,255,255,0.3); }
+  .form-select option { background: #16166a; color: #fff; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--lime); background: rgba(255,255,255,0.08); box-shadow: 0 0 0 3px var(--purple-glow); }
+  .form-textarea { resize: vertical; min-height: 160px; line-height: 1.7; font-family: var(--font-mono); font-size: 13px; }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
   /* ─── BUTTONS ─── */
-  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; font-family: inherit; }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { background: var(--accent-hover); }
-  .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
-  .btn-success { background: var(--success); color: #fff; }
-  .btn-success:hover { background: #059669; }
-  .btn-success:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
-  .btn-ghost:hover { background: var(--bg-page); color: var(--text-primary); }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 22px; border-radius: 4px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; transition: all 0.18s; font-family: var(--font-body); letter-spacing: 0.03em; text-transform: uppercase; }
+  .btn-primary { background: rgba(255,255,255,0.1); color: #fff; border: 1.5px solid rgba(255,255,255,0.3); }
+  .btn-primary:hover { background: rgba(255,255,255,0.18); transform: translateY(-1px); border-color: rgba(255,255,255,0.5); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-success { background: var(--lime); color: #fff; border: none; box-shadow: 0 0 20px rgba(240,64,181,0.4); }
+  .btn-success:hover { background: var(--lime-dark); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(240,64,181,0.55); }
+  .btn-success:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-ghost { background: transparent; color: rgba(255,255,255,0.55); border: 1.5px solid rgba(255,255,255,0.15); }
+  .btn-ghost:hover { background: rgba(255,255,255,0.06); color: #fff; border-color: rgba(255,255,255,0.3); }
   .btn-danger { background: var(--danger); color: #fff; }
-  .btn-danger:hover { background: #dc2626; }
-  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-danger:hover { background: #dc2626; transform: translateY(-1px); }
+  .btn-secondary { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.12); }
+  .btn-secondary:hover { background: rgba(255,255,255,0.12); color: #fff; }
+  .btn-sm { padding: 6px 14px; font-size: 11px; }
 
   /* ─── BADGES ─── */
-  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-  .badge-sent { background: #dbeafe; color: #1d4ed8; }
-  .badge-draft { background: #f3f4f6; color: #374151; }
-  .badge-replied { background: #d1fae5; color: #065f46; }
-  .badge-bounced { background: #fee2e2; color: #991b1b; }
-  .badge-interview_scheduled { background: #fef3c7; color: #92400e; }
-  .badge-no_response { background: #f1f5f9; color: #64748b; }
+  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+  .badge-sent { background: rgba(240,64,181,0.2); color: var(--lime); }
+  .badge-draft { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); }
+  .badge-replied { background: rgba(16,185,129,0.2); color: #34d399; }
+  .badge-bounced { background: rgba(239,68,68,0.2); color: #f87171; }
+  .badge-interview_scheduled { background: rgba(245,158,11,0.2); color: #fbbf24; }
+  .badge-no_response { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); }
 
   /* ─── TABLE ─── */
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); background: var(--bg-page); }
-  td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; color: var(--text-primary); vertical-align: middle; }
-  tr:hover td { background: #f8fafc; }
-  .td-name { font-weight: 600; }
+  th { text-align: left; padding: 10px 14px; font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.12em; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); }
+  td { padding: 13px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff; vertical-align: middle; }
+  tr:hover td { background: rgba(255,255,255,0.04); }
+  .td-name { font-weight: 700; }
   .td-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 
-  /* ─── PEOPLE CARDS (Hunt results) ─── */
-  .people-grid { display: grid; gap: 10px; }
-  .person-card { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-input); transition: all 0.15s; }
-  .person-card:hover { border-color: var(--accent); background: #fff; }
+  /* ─── PEOPLE CARDS ─── */
+  .people-grid { display: grid; gap: 2px; }
+  .person-card { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border: 1px solid rgba(255,255,255,0.07); border-radius: 0; background: rgba(255,255,255,0.04); transition: all 0.15s; }
+  .people-grid .person-card:first-child { border-radius: 6px 6px 0 0; }
+  .people-grid .person-card:last-child { border-radius: 0 0 6px 6px; }
+  .person-card:hover { border-color: var(--lime); background: rgba(240,64,181,0.07); box-shadow: none; transform: none; }
   .person-info { flex: 1; }
-  .person-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .person-name { font-size: 14px; font-weight: 700; color: var(--text-primary); }
   .person-title { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
   .person-score { display: flex; gap: 2px; margin-top: 4px; }
   .star { font-size: 12px; }
@@ -133,115 +180,164 @@
   .person-actions { display: flex; gap: 8px; }
 
   /* ─── EMAIL PREVIEW ─── */
-  .email-preview { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .email-preview { background: rgba(0,0,0,0.2); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 20px; }
   .email-meta { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
   .email-meta-row { display: flex; gap: 12px; font-size: 13px; margin-bottom: 6px; }
-  .email-meta-label { font-weight: 600; color: var(--text-secondary); width: 60px; flex-shrink: 0; }
+  .email-meta-label { font-weight: 700; color: var(--text-secondary); width: 60px; flex-shrink: 0; }
   .email-meta-value { color: var(--text-primary); }
-  .attach-badge { display: inline-flex; align-items: center; gap: 4px; background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .attach-badge { display: inline-flex; align-items: center; gap: 4px; background: var(--lime); color: #fff; padding: 2px 10px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
   .personalization-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .pill { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 6px; padding: 3px 10px; font-size: 11px; }
+  .pill { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.25); border-radius: 3px; padding: 3px 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 
   /* ─── LOADING / ALERTS ─── */
   .loading { display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 14px; padding: 20px 0; }
-  .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
-  .alert-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-  .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-  .alert-warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
-  .alert-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+  .alert { padding: 12px 16px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; font-weight: 500; }
+  .alert-success { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.25); }
+  .alert-error, .alert-danger { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.25); }
+  .alert-warning { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.25); }
+  .alert-info { background: rgba(240,64,181,0.12); color: #f9a8d4; border: 1px solid rgba(240,64,181,0.25); }
 
   /* ─── FOLLOWUP LIST ─── */
-  .followup-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+  .followup-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
   .followup-item:last-child { border-bottom: none; }
-  .followup-name { font-size: 14px; font-weight: 600; }
-  .followup-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .followup-name { font-size: 14px; font-weight: 700; color: #fff; }
+  .followup-meta { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 2px; }
 
   /* ─── SECTION VISIBILITY ─── */
   .section { display: none; }
-  .section.active { display: block; }
 
   /* ─── MISC ─── */
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
-  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
   .text-muted { color: var(--text-secondary); font-size: 13px; }
-  .step-label { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
-  .step-num { width: 22px; height: 22px; background: var(--accent); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; }
+  .step-label { display: flex; align-items: center; gap: 10px; font-family: var(--font-display-condensed); font-size: 15px; font-weight: 800; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
+  .step-num { width: 26px; height: 26px; background: var(--lime); color: #fff; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
   .action-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .empty-state { text-align: center; padding: 48px 0; color: var(--text-secondary); }
-  .empty-state svg { width: 48px; height: 48px; margin: 0 auto 12px; display: block; opacity: 0.3; }
+  .empty-state { text-align: center; padding: 56px 0; color: var(--text-secondary); }
+  .empty-state svg { width: 48px; height: 48px; margin: 0 auto 16px; display: block; opacity: 0.2; }
+
+  /* ─── SECTION HEADER STRIP ─── */
+  .section-header { padding: 0 0 28px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 28px; display: flex; align-items: flex-end; justify-content: space-between; }
+  .section-header-title { font-family: var(--font-display); font-size: clamp(36px, 5vw, 60px); font-style: italic; color: #fff; letter-spacing: -0.01em; line-height: 1; }
+  .section-header-sub { font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 8px; letter-spacing: 0.04em; }
+
+  .divider { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 20px 0; }
+
+  /* Spinner */
+  .spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--lime); border-radius: 50%; animation: spin 0.7s linear infinite; }
 
   /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--lime); }
+
+  /* ─── EMAIL SWITCHER POPOVER ─── */
+  .sender-wrap { position: relative; }
+  .sending-as { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.35); border-left: 1px solid rgba(255,255,255,0.1); padding-left: 16px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: color 0.2s; user-select: none; }
+  .sending-as:hover { color: rgba(255,255,255,0.7); }
+  .sending-as .edit-icon { opacity: 0; transition: opacity 0.2s; font-size: 11px; }
+  .sending-as:hover .edit-icon { opacity: 1; }
+  .sender-popover { position: absolute; top: calc(100% + 12px); right: 0; width: 320px; background: #0d0d55; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); z-index: 9999; display: none; }
+  .sender-popover.open { display: block; animation: sectionIn 0.18s ease; }
+  .sender-popover-title { font-family: var(--font-display-condensed); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--lime); margin-bottom: 16px; }
+  .sender-popover .form-group { margin-bottom: 12px; }
+  .sender-popover .form-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.4); margin-bottom: 5px; display: block; text-transform: uppercase; letter-spacing: 0.08em; }
+  .sender-popover .form-input { background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.1); color: #fff; font-size: 13px; padding: 8px 12px; border-radius: 4px; width: 100%; outline: none; font-family: var(--font-body); }
+  .sender-popover .form-input:focus { border-color: var(--lime); background: rgba(255,255,255,0.09); }
+  .sender-popover .pw-hint { font-size: 10px; color: rgba(255,255,255,0.25); margin-top: 4px; }
+  .sender-popover .pw-hint a { color: var(--lime); text-decoration: none; }
+  .sender-popover-actions { display: flex; gap: 8px; margin-top: 16px; }
+
+  /* ─── PAGE BACKGROUND (section-specific) ─── */
+  #pageBgA, #pageBgB {
+    position: fixed; inset: 0; z-index: -1;
+    background-size: cover; background-position: center;
+    transition: opacity 0.7s ease;
+  }
+  #pageBgA::after, #pageBgB::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(160deg, rgba(8,8,58,0.93) 0%, rgba(14,14,82,0.85) 60%, rgba(8,8,58,0.95) 100%);
+  }
+  #pageBgB { opacity: 0; }
 </style>
 </head>
 <body>
 
-<!-- ═══════════════ SIDEBAR ═══════════════ -->
-<aside class="sidebar">
-  <div class="sidebar-brand">
-    <h1>🎯 Cold Reachout Hunter</h1>
-    <p>Fall 2026 Internship Campaign</p>
+<!-- ─── Page background layers (crossfade on section change) ─── -->
+<div id="pageBgA"></div>
+<div id="pageBgB"></div>
+
+<!-- ═══════════════ TOP NAV ═══════════════ -->
+<nav class="topnav">
+  <div class="nav-logo" onclick="showSection('dashboard')"><span class="pk">COLD</span> REACHOUT HUNTER</div>
+  <div class="nav-links">
+    <button class="nav-link active" onclick="showSection('dashboard')">Dashboard</button>
+    <button class="nav-link" onclick="showSection('hunt')">Hunt Targets</button>
+    <button class="nav-link" onclick="showSection('compose')">Compose</button>
+    <button class="nav-link" onclick="showSection('tracker')">Tracker</button>
+    <button class="nav-link" onclick="showSection('resumes')">Resumes</button>
   </div>
-
-  <div class="config-status" id="configStatus">
-    <div class="config-item"><span class="config-dot warn" id="dotAnthropic"></span>Anthropic API</div>
-    <div class="config-item"><span class="config-dot warn" id="dotHunter"></span>Hunter.io (optional)</div>
-    <div class="config-item"><span class="config-dot warn" id="dotGmail"></span>Gmail Password</div>
-    <div class="config-item"><span class="config-dot warn" id="dotResume"></span>Resume PDF</div>
+  <div class="nav-right">
+    <div class="config-status" id="configStatus">
+      <div class="config-item"><span class="config-dot warn" id="dotAnthropic"></span>AI</div>
+      <div class="config-item"><span class="config-dot warn" id="dotGmail"></span>Gmail</div>
+      <div class="config-item"><span class="config-dot warn" id="dotResume"></span>Resume</div>
+    </div>
+    <div class="sender-wrap">
+      <div class="sending-as" id="sendingAsLabel" onclick="toggleSenderPopover(event)" title="Click to switch sender account">
+        <span id="sendingAsEmail">pratap.gurav03@gmail.com</span>
+        <span class="edit-icon">✎</span>
+      </div>
+      <div class="sender-popover" id="senderPopover">
+        <div class="sender-popover-title">Switch Sender Account</div>
+        <div class="form-group">
+          <label class="form-label">Gmail Address</label>
+          <input class="form-input" id="spEmail" type="email" placeholder="you@gmail.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Display Name</label>
+          <input class="form-input" id="spName" type="text" placeholder="Your Name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">App Password <span style="color:rgba(255,255,255,0.3)">(leave blank to keep current)</span></label>
+          <input class="form-input" id="spPassword" type="password" placeholder="xxxx xxxx xxxx xxxx">
+          <div class="pw-hint">Need one? <a href="https://myaccount.google.com/apppasswords" target="_blank">myaccount.google.com/apppasswords</a></div>
+        </div>
+        <div class="sender-popover-actions">
+          <button class="btn btn-success btn-sm" onclick="saveSenderConfig()">Save & Switch</button>
+          <button class="btn btn-ghost btn-sm" onclick="closeSenderPopover()">Cancel</button>
+        </div>
+        <div id="spFeedback" style="margin-top:10px;font-size:12px"></div>
+      </div>
+    </div>
+    <button class="btn btn-success btn-sm" onclick="showSection('hunt')">Hunt Now</button>
   </div>
-
-  <nav class="nav">
-    <div class="nav-label">Overview</div>
-    <div class="nav-item active" onclick="showSection('dashboard')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-      Dashboard
-    </div>
-
-    <div class="nav-label">Actions</div>
-    <div class="nav-item" onclick="showSection('hunt')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-      Hunt Targets
-    </div>
-    <div class="nav-item" onclick="showSection('compose')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-      Compose & Send
-    </div>
-
-    <div class="nav-label">Tracking</div>
-    <div class="nav-item" onclick="showSection('tracker')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-      Outreach Tracker
-    </div>
-
-    <div class="nav-label">Settings</div>
-    <div class="nav-item" onclick="showSection('resumes')">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-      Resume Manager
-    </div>
-  </nav>
-
-  <div class="sidebar-footer">
-    <p>Sending as</p>
-    <strong>pratap.gurav03@gmail.com</strong>
-  </div>
-</aside>
+</nav>
 
 <!-- ═══════════════ MAIN ═══════════════ -->
 <main class="main">
 
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <div>
-      <div class="topbar-title" id="topbarTitle">Dashboard</div>
-      <div class="topbar-sub" id="topbarSub">Overview of your outreach activity</div>
+  <!-- HERO (dashboard only) -->
+  <div class="hero-section" id="heroSection">
+    <div class="hero-bg" id="heroBg"></div>
+    <div class="hero-content">
+      <div class="hero-eyebrow">Fall 2026 · Internship Campaign · Pratap Gurav · NYU</div>
+      <div class="hero-title">Cold Reachout<br><span class="pk">Hunter.</span></div>
+      <div class="hero-tagline">Hunt. Compose. Send. Track. Repeat.</div>
+      <div class="hero-cta">
+        <button class="btn btn-success" onclick="showSection('hunt')">Start Hunting →</button>
+        <button class="btn btn-ghost" onclick="showSection('compose')">Compose Email</button>
+      </div>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="loadDashboard()">↻ Refresh</button>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-val pink" id="heroStatSent">—</div><div class="hero-stat-label">Emails Sent</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" id="heroStatReplied">—</div><div class="hero-stat-label">Replies</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" id="heroStatFollowups">—</div><div class="hero-stat-label">Follow-ups Due</div></div>
+    </div>
   </div>
 
   <div class="content">
@@ -249,12 +345,14 @@
 
     <!-- ═══ DASHBOARD ═══ -->
     <div class="section active" id="section-dashboard">
+
+      <!-- Stats strip -->
       <div class="stats-row" id="statsRow">
-        <div class="stat-card"><div class="stat-label">Total Outreach</div><div class="stat-value" id="statTotal">—</div></div>
-        <div class="stat-card accent"><div class="stat-label">Emails Sent</div><div class="stat-value" id="statSent">—</div></div>
-        <div class="stat-card success"><div class="stat-label">Replies</div><div class="stat-value" id="statReplied">—</div></div>
-        <div class="stat-card" style="border-color:#f59e0b"><div class="stat-label">Interviews 🎉</div><div class="stat-value" id="statInterview" style="color:#f59e0b">—</div></div>
-        <div class="stat-card warning"><div class="stat-label">Follow-ups Due</div><div class="stat-value" id="statFollowups">—</div></div>
+        <div class="stat-card" data-icon="📬"><div class="stat-label">Total Outreach</div><div class="stat-value" id="statTotal">—</div></div>
+        <div class="stat-card accent" data-icon="✉️"><div class="stat-label">Emails Sent</div><div class="stat-value" id="statSent">—</div></div>
+        <div class="stat-card success" data-icon="💬"><div class="stat-label">Replies</div><div class="stat-value" id="statReplied">—</div></div>
+        <div class="stat-card" data-icon="🎯"><div class="stat-label">Interviews 🎉</div><div class="stat-value" id="statInterview">—</div></div>
+        <div class="stat-card warning" data-icon="⏰"><div class="stat-label">Follow-ups Due</div><div class="stat-value" id="statFollowups">—</div></div>
       </div>
 
       <div class="two-col">
@@ -272,12 +370,12 @@
             Quick Actions
           </div>
           <div style="display:flex;flex-direction:column;gap:10px">
-            <button class="btn btn-primary" onclick="showSection('hunt')">🔍 Hunt new targets</button>
-            <button class="btn btn-ghost" onclick="showSection('compose')">✉️ Compose an email</button>
-            <button class="btn btn-ghost" onclick="showSection('tracker')">📊 View full tracker</button>
+            <button class="btn btn-success" onclick="showSection('hunt')">Hunt New Targets</button>
+            <button class="btn btn-primary" onclick="showSection('compose')">Compose an Email</button>
+            <button class="btn btn-ghost" onclick="showSection('tracker')">View Full Tracker</button>
           </div>
           <hr class="divider">
-          <div class="card-title" style="margin-bottom:12px">Recent Activity</div>
+          <div class="card-title" style="margin-bottom:12px;font-size:15px">Recent Activity</div>
           <div id="recentActivity"><div class="text-muted">Loading...</div></div>
         </div>
       </div>
@@ -285,6 +383,13 @@
 
     <!-- ═══ HUNT ═══ -->
     <div class="section" id="section-hunt">
+      <div class="section-header">
+        <div>
+          <div class="section-header-title">Hunt Targets</div>
+          <div class="section-header-sub">Find people at any company on LinkedIn</div>
+        </div>
+        <button class="btn btn-success btn-sm" onclick="showSection('compose')">Go to Compose →</button>
+      </div>
       <div class="card">
         <div class="step-label"><span class="step-num">1</span> Search for people at a company</div>
         <div class="form-row">
@@ -323,6 +428,12 @@
 
     <!-- ═══ COMPOSE & SEND ═══ -->
     <div class="section" id="section-compose">
+      <div class="section-header">
+        <div>
+          <div class="section-header-title">Compose & Send</div>
+          <div class="section-header-sub">AI-powered personalized outreach</div>
+        </div>
+      </div>
 
       <!-- Step 1: Profile -->
       <div class="card">
@@ -483,6 +594,12 @@
 
     <!-- ═══ TRACKER ═══ -->
     <div class="section" id="section-tracker">
+      <div class="section-header">
+        <div>
+          <div class="section-header-title">Outreach Tracker</div>
+          <div class="section-header-sub">Every contact, every status, one place</div>
+        </div>
+      </div>
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <div class="card-title" style="margin:0">
@@ -519,10 +636,14 @@
       </div>
     </div>
 
-  </div><!-- /content -->
-
     <!-- ─── Resume Manager Section ─────────────────────────────────────────── -->
     <div class="section" id="section-resumes">
+      <div class="section-header">
+        <div>
+          <div class="section-header-title">Resume Manager</div>
+          <div class="section-header-sub">Upload &amp; assign resumes per email type</div>
+        </div>
+      </div>
       <div class="card">
         <div class="card-title">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -553,6 +674,7 @@
       </div>
     </div>
 
+  </div><!-- /content -->
 </main>
 
 <!-- ═══ STATUS UPDATE MODAL ═══ -->
@@ -600,13 +722,41 @@ const subtitles = {
   resumes: 'Upload and assign resume versions per email type'
 };
 
+// ─── SECTION BACKGROUNDS ───────────────────────────────────────────────────
+const sectionBgs = {
+  dashboard: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1920&q=80',
+  hunt:      'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1920&q=80',
+  compose:   'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1920&q=80',
+  tracker:   'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1920&q=80',
+  resumes:   'https://images.unsplash.com/photo-1568992687947-868a62a9f521?auto=format&fit=crop&w=1920&q=80',
+};
+let _bgFront = 'A'; // which layer is currently visible
+
+function setBg(section) {
+  const url = sectionBgs[section];
+  if (!url) return;
+  const front = document.getElementById('pageBg' + _bgFront);
+  const back  = document.getElementById('pageBg' + (_bgFront === 'A' ? 'B' : 'A'));
+  // Load new image into the back layer, then crossfade
+  back.style.backgroundImage = `url('${url}')`;
+  back.style.opacity = '1';
+  front.style.opacity = '0';
+  _bgFront = _bgFront === 'A' ? 'B' : 'A';
+}
+
 function showSection(name) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
   document.getElementById(`section-${name}`).classList.add('active');
-  document.querySelector(`[onclick="showSection('${name}')"]`).classList.add('active');
-  document.getElementById('topbarTitle').textContent = sections[name];
-  document.getElementById('topbarSub').textContent = subtitles[name] || '';
+  // Activate nav link for this section
+  document.querySelectorAll(`.nav-link`).forEach(el => {
+    if (el.getAttribute('onclick') && el.getAttribute('onclick').includes(`'${name}'`)) el.classList.add('active');
+  });
+  // Show/hide hero
+  const hero = document.getElementById('heroSection');
+  if (hero) hero.style.display = (name === 'dashboard') ? '' : 'none';
+  // Crossfade background
+  setBg(name);
 
   if (name === 'dashboard') loadDashboard();
   if (name === 'tracker') loadTracker();
@@ -631,13 +781,75 @@ async function loadConfig() {
   const cfg = await api('/api/config');
   const set = (id, ok) => {
     const el = document.getElementById(id);
-    el.className = `config-dot ${ok ? 'ok' : 'err'}`;
+    if (el) el.className = `config-dot ${ok ? 'ok' : 'err'}`;
   };
   set('dotAnthropic', cfg.anthropic_key);
   set('dotHunter', cfg.hunter_key);
   set('dotGmail', cfg.gmail_password);
   set('dotResume', cfg.resume_found);
+  // Update nav email label
+  if (cfg.sender_email) {
+    const lbl = document.getElementById('sendingAsEmail');
+    if (lbl) lbl.textContent = cfg.sender_email;
+  }
 }
+
+// ─── SENDER SWITCHER ───────────────────────────────────────────────────────
+let _senderPopoverOpen = false;
+
+function toggleSenderPopover(e) {
+  e.stopPropagation();
+  const pop = document.getElementById('senderPopover');
+  if (_senderPopoverOpen) { closeSenderPopover(); return; }
+  // Pre-fill with current values
+  api('/api/sender-config').then(cfg => {
+    document.getElementById('spEmail').value = cfg.sender_email || '';
+    document.getElementById('spName').value  = cfg.sender_name  || '';
+    document.getElementById('spPassword').value = '';
+    document.getElementById('spFeedback').textContent = cfg.has_password
+      ? '✓ App password already set' : '⚠ No app password — set one to send/draft';
+    document.getElementById('spFeedback').style.color = cfg.has_password
+      ? 'rgba(52,211,153,0.9)' : 'rgba(245,158,11,0.9)';
+  });
+  pop.classList.add('open');
+  _senderPopoverOpen = true;
+}
+
+function closeSenderPopover() {
+  document.getElementById('senderPopover').classList.remove('open');
+  _senderPopoverOpen = false;
+}
+
+async function saveSenderConfig() {
+  const email = document.getElementById('spEmail').value.trim();
+  const name  = document.getElementById('spName').value.trim();
+  const pw    = document.getElementById('spPassword').value.trim();
+  const fb    = document.getElementById('spFeedback');
+
+  if (!email) { fb.textContent = 'Email is required.'; fb.style.color = '#f87171'; return; }
+
+  fb.textContent = 'Saving…'; fb.style.color = 'rgba(255,255,255,0.4)';
+  const payload = { sender_email: email, sender_name: name };
+  if (pw) payload.app_password = pw;
+
+  const res = await api('/api/sender-config', 'POST', payload);
+  if (res.ok) {
+    document.getElementById('sendingAsEmail').textContent = res.sender_email;
+    fb.textContent = '✓ Switched to ' + res.sender_email;
+    fb.style.color = 'rgba(52,211,153,0.9)';
+    setTimeout(closeSenderPopover, 1200);
+    loadConfig(); // refresh dots
+  } else {
+    fb.textContent = 'Save failed. Try again.'; fb.style.color = '#f87171';
+  }
+}
+
+// Close popover when clicking outside
+document.addEventListener('click', (e) => {
+  if (_senderPopoverOpen && !document.getElementById('senderPopover').contains(e.target)) {
+    closeSenderPopover();
+  }
+});
 
 // ─── DASHBOARD ─────────────────────────────────────────────────────────────
 async function loadDashboard() {
@@ -648,6 +860,13 @@ async function loadDashboard() {
   document.getElementById('statReplied').textContent = data.replied;
   document.getElementById('statInterview').textContent = data.interview_scheduled;
   document.getElementById('statFollowups').textContent = data.followups_due;
+  // Mirror into hero stats
+  const hs = document.getElementById('heroStatSent');
+  const hr = document.getElementById('heroStatReplied');
+  const hf = document.getElementById('heroStatFollowups');
+  if (hs) hs.textContent = data.sent ?? '—';
+  if (hr) hr.textContent = data.replied ?? '—';
+  if (hf) hf.textContent = data.followups_due ?? '—';
 
   // Follow-ups
   const fuList = document.getElementById('followupList');
@@ -1203,6 +1422,7 @@ async function submitStatusUpdate() {
 
 // ─── INIT ──────────────────────────────────────────────────────────────────
 (async () => {
+  setBg('dashboard'); // seed initial background
   await loadConfig();
   await loadDashboard();
   await loadResumePickerForCompose();
@@ -1361,6 +1581,18 @@ async function saveAssignments() {
   _resumeConfig = data.config || _resumeConfig;
   await loadResumePickerForCompose();
 }
+
+// ─── HERO PARALLAX ─────────────────────────────────────────────────────────
+const mainEl = document.querySelector('.main');
+if (mainEl) {
+  mainEl.addEventListener('scroll', () => {
+    const heroBg = document.getElementById('heroBg');
+    if (heroBg && document.getElementById('heroSection')?.style.display !== 'none') {
+      heroBg.style.transform = `translateY(${mainEl.scrollTop * 0.25}px)`;
+    }
+  }, { passive: true });
+}
+
 </script>
 
 <!-- ═══ RESUME PREVIEW MODAL ═══ -->

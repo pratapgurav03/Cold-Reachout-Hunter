@@ -164,6 +164,8 @@ def save_draft_to_gmail(
     resume_path: Optional[Path] = None,
     in_reply_to: Optional[str] = None,
     references: Optional[str] = None,
+    from_email: Optional[str] = None,
+    from_name: Optional[str] = None,
 ) -> Optional[str]:
     """
     Save email as a real Gmail draft using IMAP + App Password.
@@ -178,6 +180,9 @@ def save_draft_to_gmail(
     if not app_password:
         raise ValueError("GMAIL_APP_PASSWORD not set in .env")
 
+    _from_email = from_email or SENDER_EMAIL
+    _from_name  = from_name  or SENDER_NAME
+
     if resume_path is None:
         resume_path = _find_resume_path()
 
@@ -189,10 +194,13 @@ def save_draft_to_gmail(
         to_email, to_name, subject, body_text, None, resume_path,
         in_reply_to=in_reply_to, references=references, message_id=message_id
     )
+    # Override From header with active sender
+    msg.replace_header("From", f"{_from_name} <{_from_email}>")
+    msg.replace_header("Reply-To", _from_email)
 
     try:
         imap = imaplib.IMAP4_SSL("imap.gmail.com")
-        imap.login(SENDER_EMAIL, app_password.replace(" ", ""))
+        imap.login(_from_email, app_password.replace(" ", ""))
         imap.select('"[Gmail]/Drafts"')
         imap.append(
             '"[Gmail]/Drafts"',
@@ -221,6 +229,8 @@ def send_via_smtp(
     resume_path: Optional[Path] = None,
     in_reply_to: Optional[str] = None,
     references: Optional[str] = None,
+    from_email: Optional[str] = None,
+    from_name: Optional[str] = None,
 ) -> Optional[str]:
     """
     Send email via Gmail SMTP using App Password.
@@ -236,6 +246,9 @@ def send_via_smtp(
             "Add to .env: GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx"
         )
 
+    _from_email = from_email or SENDER_EMAIL
+    _from_name  = from_name  or SENDER_NAME
+
     # Find resume
     if resume_path is None:
         resume_path = _find_resume_path()
@@ -246,11 +259,13 @@ def send_via_smtp(
         to_email, to_name, subject, body_text, body_html, resume_path,
         in_reply_to=in_reply_to, references=references, message_id=message_id
     )
+    msg.replace_header("From", f"{_from_name} <{_from_email}>")
+    msg.replace_header("Reply-To", _from_email)
 
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(SENDER_EMAIL, app_password.replace(" ", ""))
-            server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
+            server.login(_from_email, app_password.replace(" ", ""))
+            server.sendmail(_from_email, to_email, msg.as_string())
         return message_id
     except smtplib.SMTPAuthenticationError:
         print("\n❌ Gmail authentication failed.")

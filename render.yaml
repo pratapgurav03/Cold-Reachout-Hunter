@@ -17,5 +17,9 @@ services:
         sync: false
       - key: RAPIDAPI_KEY
         sync: false
+      - key: SENDER_EMAIL
+        sync: false
+      - key: SENDER_NAME
+        sync: false
       - key: FLASK_ENV
         value: production

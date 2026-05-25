@@ -34,6 +34,26 @@ _scrape_lock = threading.Lock()
 tracker = OutreachTracker()
 sender = EmailSender(app_password=os.getenv("GMAIL_APP_PASSWORD"))
 
+# ─── Sender config helpers ────────────────────────────────────────────────────
+SENDER_CONFIG_PATH = Path(__file__).parent / "sender_config.json"
+_DEFAULT_SENDER = {"sender_email": "pratap.gurav03@gmail.com", "sender_name": "Pratap Gurav", "app_password": ""}
+
+def _load_sender_config():
+    if SENDER_CONFIG_PATH.exists():
+        try:
+            return json.loads(SENDER_CONFIG_PATH.read_text())
+        except Exception:
+            pass
+    # Fall back to env vars (used on Render / any server deploy)
+    return {
+        "sender_email": os.getenv("SENDER_EMAIL", _DEFAULT_SENDER["sender_email"]),
+        "sender_name":  os.getenv("SENDER_NAME",  _DEFAULT_SENDER["sender_name"]),
+        "app_password": os.getenv("GMAIL_APP_PASSWORD", ""),
+    }
+
+def _save_sender_config(cfg):
+    SENDER_CONFIG_PATH.write_text(json.dumps(cfg, indent=2))
+
 
 # ─── Pages ────────────────────────────────────────────────────────────────────
 
@@ -47,13 +67,42 @@ def index():
 @app.route("/api/config")
 def api_config():
     resume = Path(__file__).parent / "Pratap_Gurav_Resume.pdf"
+    cfg = _load_sender_config()
+    # App password: prefer sender_config, fall back to .env
+    has_pw = bool(cfg.get("app_password")) or bool(os.getenv("GMAIL_APP_PASSWORD"))
     return jsonify({
         "anthropic_key": bool(os.getenv("ANTHROPIC_API_KEY")),
         "hunter_key": bool(os.getenv("HUNTER_API_KEY")),
-        "gmail_password": bool(os.getenv("GMAIL_APP_PASSWORD")),
+        "gmail_password": has_pw,
         "resume_found": resume.exists(),
-        "sender_email": "pratap.gurav03@gmail.com"
+        "sender_email": cfg.get("sender_email", ""),
+        "sender_name": cfg.get("sender_name", ""),
     })
+
+
+@app.route("/api/sender-config", methods=["GET"])
+def api_get_sender_config():
+    cfg = _load_sender_config()
+    # Mask the password — send back just whether it's set
+    return jsonify({
+        "sender_email": cfg.get("sender_email", ""),
+        "sender_name": cfg.get("sender_name", ""),
+        "has_password": bool(cfg.get("app_password")) or bool(os.getenv("GMAIL_APP_PASSWORD")),
+    })
+
+
+@app.route("/api/sender-config", methods=["POST"])
+def api_save_sender_config():
+    data = request.json or {}
+    cfg = _load_sender_config()
+    if "sender_email" in data:
+        cfg["sender_email"] = data["sender_email"].strip()
+    if "sender_name" in data:
+        cfg["sender_name"] = data["sender_name"].strip()
+    if "app_password" in data and data["app_password"].strip():
+        cfg["app_password"] = data["app_password"].strip()
+    _save_sender_config(cfg)
+    return jsonify({"ok": True, "sender_email": cfg["sender_email"], "sender_name": cfg["sender_name"]})
 
 
 # ─── Dashboard / Stats ────────────────────────────────────────────────────────
@@ -216,7 +265,8 @@ def api_save_draft():
     linkedin_url = data.get("linkedin_url", "")
     email_type = data.get("email_type", "internship")
 
-    app_password = os.getenv("GMAIL_APP_PASSWORD")
+    _scfg = _load_sender_config()
+    app_password = _scfg.get("app_password") or os.getenv("GMAIL_APP_PASSWORD")
 
     # Try saving to Gmail Drafts via IMAP first
     resume_override = data.get("resume_filename")  # optional manual override from compose panel
@@ -229,7 +279,9 @@ def api_save_draft():
             subject=subject,
             body_text=body,
             app_password=app_password,
-            resume_path=resume_path if resume_path and resume_path.exists() else None
+            resume_path=resume_path if resume_path and resume_path.exists() else None,
+            from_email=_scfg.get("sender_email"),
+            from_name=_scfg.get("sender_name"),
         )
         if message_id:
             # Log to tracker so follow-up engine can find the Message-ID later
@@ -285,9 +337,11 @@ def api_send():
         return jsonify({"error": "Missing required fields"}), 400
 
     # Check Gmail config
-    if not os.getenv("GMAIL_APP_PASSWORD"):
+    _scfg2 = _load_sender_config()
+    _pw2 = _scfg2.get("app_password") or os.getenv("GMAIL_APP_PASSWORD")
+    if not _pw2:
         return jsonify({
-            "error": "GMAIL_APP_PASSWORD not configured. Add it to your .env file."
+            "error": "App password not configured. Set it via the email switcher in the nav."
         }), 500
 
     try:
@@ -299,7 +353,10 @@ def api_send():
             subject=subject,
             body_text=body_text,
             body_html=body_html or None,
-            resume_path=resume_path
+            resume_path=resume_path,
+            app_password=_pw2,
+            from_email=_scfg2.get("sender_email"),
+            from_name=_scfg2.get("sender_name"),
         )
 
         success = bool(message_id)
@@ -348,7 +405,8 @@ def api_bulk_draft():
         return jsonify({"error": "No people provided"}), 400
 
     api_key = os.getenv("ANTHROPIC_API_KEY")
-    app_password = os.getenv("GMAIL_APP_PASSWORD")
+    _bulk_scfg = _load_sender_config()
+    app_password = _bulk_scfg.get("app_password") or os.getenv("GMAIL_APP_PASSWORD")
 
     if not api_key:
         return jsonify({"error": "ANTHROPIC_API_KEY not configured"}), 500
@@ -407,7 +465,9 @@ def api_bulk_draft():
                     subject=subject,
                     body_text=body,
                     app_password=app_password,
-                    resume_path=bulk_resume if bulk_resume and bulk_resume.exists() else None
+                    resume_path=bulk_resume if bulk_resume and bulk_resume.exists() else None,
+                    from_email=_bulk_scfg.get("sender_email"),
+                    from_name=_bulk_scfg.get("sender_name"),
                 )
                 result["status"] = "drafted" if draft_message_id else "draft_failed"
             else:
@@ -467,7 +527,8 @@ def api_followup_draft():
     target_email = data.get("target_email")  # optional — if None, drafts all due
 
     api_key = os.getenv("ANTHROPIC_API_KEY")
-    app_password = os.getenv("GMAIL_APP_PASSWORD")
+    _fu_scfg = _load_sender_config()
+    app_password = _fu_scfg.get("app_password") or os.getenv("GMAIL_APP_PASSWORD")
 
     if not api_key:
         return jsonify({"error": "ANTHROPIC_API_KEY not configured"}), 500
@@ -527,6 +588,8 @@ def api_followup_draft():
                     app_password=app_password,
                     in_reply_to=original_message_id,
                     references=original_message_id,
+                    from_email=_fu_scfg.get("sender_email"),
+                    from_name=_fu_scfg.get("sender_name"),
                 )
                 result["status"] = "drafted" if fu_message_id else "draft_failed"
                 result["threaded"] = bool(original_message_id)
