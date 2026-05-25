@@ -13,6 +13,8 @@ Resume attachment: automatically attaches Pratap_Gurav_Resume.pdf
 """
 
 import os
+import time
+import imaplib
 import smtplib
 import base64
 import json
@@ -20,6 +22,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+from email.utils import make_msgid
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
@@ -51,14 +54,23 @@ def _build_message(
     subject: str,
     body_text: str,
     body_html: Optional[str] = None,
-    resume_path: Optional[Path] = None
+    resume_path: Optional[Path] = None,
+    in_reply_to: Optional[str] = None,
+    references: Optional[str] = None,
+    message_id: Optional[str] = None,
 ) -> MIMEMultipart:
-    """Build the MIME message with optional HTML and PDF attachment."""
+    """Build the MIME message with optional HTML, PDF attachment, and threading headers."""
     msg = MIMEMultipart("mixed")
     msg["From"] = f"{SENDER_NAME} <{SENDER_EMAIL}>"
     msg["To"] = f"{to_name} <{to_email}>" if to_name else to_email
     msg["Subject"] = subject
     msg["Reply-To"] = SENDER_EMAIL
+    msg["Message-ID"] = message_id or make_msgid(domain="gmail.com")
+
+    # Threading headers — set these to continue an existing thread
+    if in_reply_to:
+        msg["In-Reply-To"] = in_reply_to
+        msg["References"] = references or in_reply_to
 
     # Email body (alternative: plain + HTML)
     body_part = MIMEMultipart("alternative")
@@ -143,6 +155,62 @@ def save_draft_gmail_api(
         return None
 
 
+def save_draft_to_gmail(
+    to_email: str,
+    to_name: str,
+    subject: str,
+    body_text: str,
+    app_password: Optional[str] = None,
+    resume_path: Optional[Path] = None,
+    in_reply_to: Optional[str] = None,
+    references: Optional[str] = None,
+) -> Optional[str]:
+    """
+    Save email as a real Gmail draft using IMAP + App Password.
+    No OAuth needed — works with the existing GMAIL_APP_PASSWORD.
+    The draft will appear in Gmail's Drafts folder with resume attached.
+
+    Returns the Message-ID string on success, None on failure.
+    Pass in_reply_to (original Message-ID) to continue an existing thread.
+    """
+    if not app_password:
+        app_password = os.getenv("GMAIL_APP_PASSWORD")
+    if not app_password:
+        raise ValueError("GMAIL_APP_PASSWORD not set in .env")
+
+    if resume_path is None:
+        resume_path = _find_resume_path()
+
+    # Generate a stable Message-ID for this draft so we can store it
+    message_id = make_msgid(domain="gmail.com")
+
+    # Build the full MIME message (same as sending, but we store it instead)
+    msg = _build_message(
+        to_email, to_name, subject, body_text, None, resume_path,
+        in_reply_to=in_reply_to, references=references, message_id=message_id
+    )
+
+    try:
+        imap = imaplib.IMAP4_SSL("imap.gmail.com")
+        imap.login(SENDER_EMAIL, app_password.replace(" ", ""))
+        imap.select('"[Gmail]/Drafts"')
+        imap.append(
+            '"[Gmail]/Drafts"',
+            "\\Draft",
+            imaplib.Time2Internaldate(time.time()),
+            msg.as_bytes()
+        )
+        imap.logout()
+        print(f"  ✅ Draft saved to Gmail Drafts for {to_name} <{to_email}>")
+        return message_id
+    except imaplib.IMAP4.error as e:
+        print(f"  ❌ IMAP error: {e}")
+        return None
+    except Exception as e:
+        print(f"  ❌ Draft save failed: {e}")
+        return None
+
+
 def send_via_smtp(
     to_email: str,
     to_name: str,
@@ -150,11 +218,14 @@ def send_via_smtp(
     body_text: str,
     body_html: Optional[str] = None,
     app_password: Optional[str] = None,
-    resume_path: Optional[Path] = None
-) -> bool:
+    resume_path: Optional[Path] = None,
+    in_reply_to: Optional[str] = None,
+    references: Optional[str] = None,
+) -> Optional[str]:
     """
     Send email via Gmail SMTP using App Password.
-    Returns True on success.
+    Returns the Message-ID string on success, None on failure.
+    Pass in_reply_to (original Message-ID) to continue an existing thread.
     """
     if not app_password:
         app_password = os.getenv("GMAIL_APP_PASSWORD")
@@ -169,21 +240,26 @@ def send_via_smtp(
     if resume_path is None:
         resume_path = _find_resume_path()
 
-    msg = _build_message(to_email, to_name, subject, body_text, body_html, resume_path)
+    # Generate a Message-ID to store for future thread continuation
+    message_id = make_msgid(domain="gmail.com")
+    msg = _build_message(
+        to_email, to_name, subject, body_text, body_html, resume_path,
+        in_reply_to=in_reply_to, references=references, message_id=message_id
+    )
 
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(SENDER_EMAIL, app_password.replace(" ", ""))
             server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
-        return True
+        return message_id
     except smtplib.SMTPAuthenticationError:
         print("\n❌ Gmail authentication failed.")
         print("   Make sure you're using an App Password, not your regular Gmail password.")
         print("   Get one at: https://myaccount.google.com/apppasswords")
-        return False
+        return None
     except Exception as e:
         print(f"\n❌ Send failed: {e}")
-        return False
+        return None
 
 
 def save_draft_file(

@@ -196,6 +196,79 @@ def _text_to_html(text: str) -> str:
 </html>"""
 
 
+def generate_followup_email(
+    target_name: str,
+    target_email: str,
+    target_title: str,
+    target_company: str,
+    original_subject: str,
+    days_since_sent: int,
+    anthropic_api_key: str,
+    model: str = "claude-opus-4-6"
+) -> dict:
+    """
+    Generate a short, polite follow-up email for someone who hasn't replied.
+    Different tone from the original — brief, no pressure, adds a tiny bit of new value.
+    """
+    import re, json
+
+    first_name = target_name.split()[0] if target_name else "there"
+
+    prompt = f"""You are writing a follow-up email on behalf of Pratap Gurav, an NYU Management of Technology student (graduating May 2027) seeking a Fall 2026 internship in TPM / operations / product.
+
+ORIGINAL EMAIL CONTEXT:
+- Sent to: {target_name} ({target_title} at {target_company})
+- Original subject: {original_subject}
+- Days since sent: {days_since_sent} days ago (no reply yet)
+
+PRATAP'S QUICK CONTEXT:
+- 2+ years as Technical PM at Henkel — $1.7M+ cost savings, cross-functional programs
+- Currently at NYU Tandon studying Management of Technology
+- Built an AI voice agent at GDG NYC Hackathon (April 2026)
+- Targeting Fall 2026 internships in TPM/ops/product
+
+FOLLOW-UP RULES:
+1. Super short — max 4 sentences total. No fluff.
+2. Reference the original email briefly ("I reached out last week about...")
+3. Add ONE new piece of value or context not in the original (e.g. a recent project, a specific angle relevant to their company)
+4. Zero pressure — "totally understand if the timing isn't right"
+5. Clear single ask — quick reply or a 15-min call
+6. DO NOT re-attach resume context or repeat everything from first email
+7. Warm but professional tone. First name only.
+
+Output ONLY valid JSON:
+{{
+  "subject": "Re: {original_subject}",
+  "body": "full follow-up email text here"
+}}"""
+
+    client = anthropic.Anthropic(api_key=anthropic_api_key)
+    response = client.messages.create(
+        model=model,
+        max_tokens=512,
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    raw = response.content[0].text.strip()
+    if raw.startswith("```"):
+        raw = re.sub(r"```(?:json)?\n?", "", raw).strip("` \n")
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        data = {
+            "subject": f"Re: {original_subject}",
+            "body": raw
+        }
+
+    body_text = data.get("body", "")
+    return {
+        "subject": data.get("subject", f"Re: {original_subject}"),
+        "body_text": body_text,
+        "body_html": _text_to_html(body_text),
+    }
+
+
 def preview_email(email_data: dict, target_name: str, target_email: str) -> None:
     """Pretty-print the generated email for review."""
     print("\n" + "═" * 60)

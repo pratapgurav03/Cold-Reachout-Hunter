@@ -218,6 +218,12 @@
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
       Outreach Tracker
     </div>
+
+    <div class="nav-label">Settings</div>
+    <div class="nav-item" onclick="showSection('resumes')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      Resume Manager
+    </div>
   </nav>
 
   <div class="sidebar-footer">
@@ -390,8 +396,9 @@
             <label class="form-label">Email Address</label>
             <input class="form-input" id="targetEmail" placeholder="Will be found automatically or enter manually">
           </div>
-          <div class="form-group" style="display:flex;align-items:flex-end">
-            <button class="btn btn-ghost" onclick="findEmail()" id="findEmailBtn" style="width:100%">🔍 Auto-find email</button>
+          <div class="form-group" style="display:flex;align-items:flex-end;gap:8px">
+            <button class="btn btn-ghost" onclick="findEmail()" id="findEmailBtn" style="flex:1">🔍 Auto-find email</button>
+            <button class="btn btn-secondary" onclick="unlockWithManualEmail()" style="flex:1">✅ Use this email</button>
           </div>
         </div>
         <div id="emailFinderResult" style="display:none"></div>
@@ -403,7 +410,7 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Email Type</label>
-            <select class="form-select" id="emailType">
+            <select class="form-select" id="emailType" onchange="updateResumeForType()">
               <option value="internship">Internship — Ask about Fall 2026 opportunities</option>
               <option value="informational">Informational — Request 15-min chat</option>
               <option value="networking">Networking — Build a connection</option>
@@ -414,6 +421,14 @@
             <label class="form-label">Extra Context (optional)</label>
             <input class="form-input" id="extraContext" placeholder="e.g. mutual connection, specific project, their recent post...">
           </div>
+        </div>
+        <div class="form-group" style="margin-bottom:16px">
+          <label class="form-label">Resume to Attach
+            <span style="font-weight:400;color:#94a3b8;font-size:11px;margin-left:6px">auto-selected by type · override here</span>
+          </label>
+          <select class="form-select" id="resumePicker">
+            <option value="">Loading resumes...</option>
+          </select>
         </div>
         <button class="btn btn-primary" onclick="generateEmail()" id="generateBtn">
           ✨ Generate Email with AI
@@ -477,6 +492,9 @@
           <div style="display:flex;gap:10px;align-items:center">
             <input class="form-input" id="trackerSearch" placeholder="Search name or company..." oninput="filterTracker()" style="width:220px;padding:8px 12px">
             <button class="btn btn-ghost btn-sm" onclick="loadTracker()">↻ Refresh</button>
+            <button class="btn btn-warning btn-sm" id="followupBtn" onclick="draftFollowups()" style="background:#f59e0b;color:#fff;border:none;">
+              🔔 Draft Follow-ups
+            </button>
           </div>
         </div>
 
@@ -502,6 +520,39 @@
     </div>
 
   </div><!-- /content -->
+
+    <!-- ─── Resume Manager Section ─────────────────────────────────────────── -->
+    <div class="section" id="section-resumes">
+      <div class="card">
+        <div class="card-title">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Resume Manager
+        </div>
+        <p style="color:#64748b;font-size:13px;margin-bottom:20px">Upload different resume versions and assign them per email type. The right resume gets attached automatically.</p>
+
+        <!-- Upload -->
+        <div style="margin-bottom:24px">
+          <label class="form-label">Upload a Resume (PDF)</label>
+          <div style="display:flex;gap:10px;align-items:center">
+            <input type="file" id="resumeFileInput" accept=".pdf" style="font-size:13px;color:#334155">
+            <button class="btn btn-primary" onclick="uploadResume()">⬆ Upload</button>
+          </div>
+          <div id="uploadResult" style="margin-top:8px;display:none"></div>
+        </div>
+
+        <!-- Resume list -->
+        <div id="resumeList" style="margin-bottom:24px"></div>
+
+        <!-- Assignments -->
+        <div>
+          <div class="form-label" style="margin-bottom:12px;font-size:14px;font-weight:600">Assign Resume per Email Type</div>
+          <div id="resumeAssignments" style="display:grid;gap:10px"></div>
+          <button class="btn btn-primary" onclick="saveAssignments()" style="margin-top:16px">💾 Save Assignments</button>
+          <div id="assignResult" style="margin-top:8px;display:none"></div>
+        </div>
+      </div>
+    </div>
+
 </main>
 
 <!-- ═══ STATUS UPDATE MODAL ═══ -->
@@ -540,12 +591,13 @@ const state = {
 };
 
 // ─── NAVIGATION ────────────────────────────────────────────────────────────
-const sections = { dashboard: 'Dashboard', hunt: 'Hunt Targets', compose: 'Compose & Send', tracker: 'Outreach Tracker' };
+const sections = { dashboard: 'Dashboard', hunt: 'Hunt Targets', compose: 'Compose & Send', tracker: 'Outreach Tracker', resumes: 'Resume Manager' };
 const subtitles = {
   dashboard: 'Overview of your outreach activity',
   hunt: 'Find the right people at target companies',
   compose: 'Scrape → Find email → Generate → Review → Send',
-  tracker: 'Track every email, reply, and follow-up'
+  tracker: 'Track every email, reply, and follow-up',
+  resumes: 'Upload and assign resume versions per email type'
 };
 
 function showSection(name) {
@@ -554,10 +606,11 @@ function showSection(name) {
   document.getElementById(`section-${name}`).classList.add('active');
   document.querySelector(`[onclick="showSection('${name}')"]`).classList.add('active');
   document.getElementById('topbarTitle').textContent = sections[name];
-  document.getElementById('topbarSub').textContent = subtitles[name];
+  document.getElementById('topbarSub').textContent = subtitles[name] || '';
 
   if (name === 'dashboard') loadDashboard();
   if (name === 'tracker') loadTracker();
+  if (name === 'resumes') loadResumeManager();
 }
 
 // ─── API HELPERS ───────────────────────────────────────────────────────────
@@ -650,7 +703,34 @@ async function runHunt() {
     }
 
     const results = data.results || [];
+    window._lastHuntResults = results;
+    window._lastHuntCompany = company;
+
     document.getElementById('huntResultsTitle').textContent = `${results.length} people found at ${company}`;
+
+    // Show / update Draft All button
+    let draftAllBtn = document.getElementById('draftAllBtn');
+    if (!draftAllBtn) {
+      const titleEl = document.getElementById('huntResultsTitle');
+      draftAllBtn = document.createElement('button');
+      draftAllBtn.id = 'draftAllBtn';
+      draftAllBtn.className = 'btn btn-success btn-sm';
+      draftAllBtn.style = 'margin-left:12px;';
+      draftAllBtn.onclick = draftAll;
+      titleEl.parentNode.insertBefore(draftAllBtn, titleEl.nextSibling);
+    }
+    draftAllBtn.textContent = `⚡ Draft All ${results.length}`;
+    draftAllBtn.style.display = results.length ? 'inline-flex' : 'none';
+
+    // Progress bar container
+    let progressEl = document.getElementById('bulkProgress');
+    if (!progressEl) {
+      progressEl = document.createElement('div');
+      progressEl.id = 'bulkProgress';
+      progressEl.style = 'display:none;margin:12px 0;';
+      document.getElementById('huntResults').prepend(progressEl);
+    }
+    progressEl.style.display = 'none';
 
     const grid = document.getElementById('peopleGrid');
     if (results.length === 0) {
@@ -696,6 +776,71 @@ function composeFor(url, name, title, company) {
     document.getElementById('manualName').value = name;
     document.getElementById('manualTitle').value = title;
     document.getElementById('manualCompany').value = company;
+  }
+}
+
+async function draftAll() {
+  const people = window._lastHuntResults || [];
+  const company = window._lastHuntCompany || '';
+  if (!people.length) return;
+
+  const btn = document.getElementById('draftAllBtn');
+  const progressEl = document.getElementById('bulkProgress');
+  btn.disabled = true;
+  btn.textContent = '⏳ Drafting...';
+  progressEl.style.display = 'block';
+  progressEl.innerHTML = `
+    <div style="background:#f3f4f6;border-radius:8px;padding:14px;font-size:13px;">
+      <div style="margin-bottom:8px;font-weight:600;color:#374151;">⚡ Bulk drafting ${people.length} emails — this takes ~${people.length * 8}s</div>
+      <div style="background:#e5e7eb;border-radius:4px;height:8px;overflow:hidden;">
+        <div id="bulkBar" style="height:100%;background:#6366f1;width:0%;transition:width 0.5s;"></div>
+      </div>
+      <div id="bulkStatus" style="margin-top:8px;color:#6b7280;">Starting...</div>
+    </div>`;
+
+  // Animate progress bar while waiting
+  let fakeProgress = 0;
+  const barInterval = setInterval(() => {
+    fakeProgress = Math.min(fakeProgress + (100 / (people.length * 8)), 90);
+    const bar = document.getElementById('bulkBar');
+    if (bar) bar.style.width = fakeProgress + '%';
+  }, 1000);
+
+  try {
+    const result = await api('/api/bulk-draft', 'POST', {
+      people: people,
+      email_type: 'internship'
+    });
+
+    clearInterval(barInterval);
+    const bar = document.getElementById('bulkBar');
+    if (bar) bar.style.width = '100%';
+
+    const statusEl = document.getElementById('bulkStatus');
+    if (statusEl) {
+      statusEl.innerHTML = `<strong style="color:#059669">${result.message}</strong>`;
+    }
+
+    // Show per-person results
+    const details = (result.results || []).map(r => {
+      const icon = r.status === 'drafted' ? '✅' : r.status === 'no_email' ? '📭' : '❌';
+      const detail = r.status === 'drafted' ? r.subject : (r.note || r.status);
+      return `<div style="padding:4px 0;font-size:12px;">${icon} <strong>${r.name}</strong> — ${detail}</div>`;
+    }).join('');
+
+    progressEl.innerHTML += `<div style="margin-top:12px;border-top:1px solid #e5e7eb;padding-top:10px;">${details}</div>`;
+
+    btn.textContent = `✅ ${result.drafted} drafted`;
+
+    if (result.drafted > 0) {
+      showAlert('globalAlert', 'success',
+        `${result.drafted} drafts saved to Gmail Drafts with resume attached! Open Gmail to review and send.`);
+    }
+  } catch(e) {
+    clearInterval(barInterval);
+    progressEl.innerHTML = `<div style="color:#dc2626;padding:10px;">Bulk draft failed: ${e.message}</div>`;
+    btn.textContent = `⚡ Draft All ${people.length}`;
+    btn.disabled = false;
   }
 }
 
@@ -758,6 +903,23 @@ function unlockStep2() {
   s2.style.pointerEvents = 'auto';
   // Auto-find email
   if (state.profile?.name && state.profile?.company) findEmail();
+}
+
+function unlockWithManualEmail() {
+  const email = document.getElementById('targetEmail').value.trim();
+  if (!email || !email.includes('@')) {
+    alert('Enter a valid email address first.');
+    return;
+  }
+  const el = document.getElementById('emailFindResult');
+  if (el) {
+    el.innerHTML = `<div class="alert alert-info">Using manually entered email: <strong>${email}</strong></div>`;
+    el.style.display = 'block';
+  }
+  const s3 = document.getElementById('step3Card');
+  s3.style.opacity = '1';
+  s3.style.pointerEvents = 'auto';
+  document.getElementById('step4Card').style.display = 'block';
 }
 
 async function findEmail() {
@@ -900,27 +1062,62 @@ async function saveDraftOnly() {
   btn.textContent = 'Saving...';
 
   try {
+    const resumePicker = document.getElementById('resumePicker');
     const saveResult = await api('/api/save-draft', 'POST', {
       to_email: toEmail, to_name: state.profile?.name || '',
-      subject, body
-    });
-
-    await api('/api/tracker/log-draft', 'POST', {
-      to_email: toEmail, to_name: state.profile?.name || '',
-      subject,
+      subject, body,
       email_type: document.getElementById('emailType').value,
       linkedin_url: state.profile?.profile_url || '',
       target_title: state.profile?.title || '',
-      target_company: state.profile?.company || ''
+      target_company: state.profile?.company || '',
+      resume_filename: resumePicker?.value || ''
     });
 
-    document.getElementById('sendAlert').innerHTML = `<div class="alert alert-success">💾 Draft saved! File: ${saveResult.draft_file?.split('/').pop()}</div>`;
+    document.getElementById('sendAlert').innerHTML = `<div class="alert alert-success">💾 ${saveResult.message || 'Draft saved!'}</div>`;
     document.getElementById('sendAlert').style.display = 'block';
   } catch(e) {
     alert('Save failed: ' + e.message);
   } finally {
     btn.disabled = false;
     btn.textContent = '💾 Save Draft Only';
+  }
+}
+
+// ─── FOLLOW-UP ENGINE ──────────────────────────────────────────────────────
+async function draftFollowups() {
+  const btn = document.getElementById('followupBtn');
+
+  // First check how many are due
+  const check = await api('/api/followup-due');
+  const count = check.count || 0;
+
+  if (count === 0) {
+    showAlert('globalAlert', 'info', 'No follow-ups due right now. Check back after 7 days from your sent emails.');
+    return;
+  }
+
+  if (!confirm(`${count} follow-up${count > 1 ? 's' : ''} due. Generate and save to Gmail Drafts?`)) return;
+
+  btn.disabled = true;
+  btn.textContent = `⏳ Drafting ${count} follow-ups...`;
+
+  try {
+    const result = await api('/api/followup-draft', 'POST', {});
+
+    const details = (result.results || []).map(r => {
+      const icon = r.status === 'drafted' ? '✅' : '❌';
+      return `${icon} ${r.name} — ${r.subject || r.note || r.status}`;
+    }).join('\n');
+
+    showAlert('globalAlert', 'success',
+      `${result.message}\n\nOpen Gmail Drafts to review before sending.`);
+
+    btn.textContent = `✅ ${result.drafted} follow-ups drafted`;
+    await loadTracker();
+  } catch(e) {
+    showAlert('globalAlert', 'error', 'Follow-up drafting failed: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '🔔 Draft Follow-ups';
   }
 }
 
@@ -1008,7 +1205,177 @@ async function submitStatusUpdate() {
 (async () => {
   await loadConfig();
   await loadDashboard();
+  await loadResumePickerForCompose();
 })();
+
+// ─── RESUME MANAGER ────────────────────────────────────────────────────────
+
+let _resumeConfig = { default: '', assignments: {} };
+
+async function loadResumeManager() {
+  const data = await api('/api/resumes');
+  _resumeConfig = data.config || { default: '', assignments: {} };
+  renderResumeList(data.resumes || []);
+  renderAssignments(data.resumes || [], data.config || {});
+  await loadResumePickerForCompose(data.resumes);
+}
+
+function renderResumeList(resumes) {
+  const el = document.getElementById('resumeList');
+  if (!resumes.length) {
+    el.innerHTML = '<p style="color:#94a3b8;font-size:13px">No resumes uploaded yet.</p>';
+    return;
+  }
+  el.innerHTML = `
+    <div class="form-label" style="margin-bottom:8px;font-size:14px;font-weight:600">Uploaded Resumes</div>
+    <div style="display:grid;gap:8px">
+      ${resumes.map(r => `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc">
+          <svg style="width:18px;height:18px;color:#e11d48;flex-shrink:0" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.filename}</div>
+            <div style="font-size:11px;color:#94a3b8">${r.size_kb} KB${r.is_default ? ' · <span style="color:#0ea5e9;font-weight:600">DEFAULT</span>' : ''}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="previewResume('${r.filename}')" style="font-size:11px">👁 Preview</button>
+          <button class="btn btn-ghost btn-sm" onclick="setDefault('${r.filename}')" ${r.is_default ? 'disabled' : ''} style="font-size:11px">${r.is_default ? '✓ Default' : 'Set Default'}</button>
+          <button class="btn btn-ghost btn-sm" onclick="renameResume('${r.filename}')" style="font-size:11px">Rename</button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteResume('${r.filename}')" style="font-size:11px;color:#ef4444">Delete</button>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderAssignments(resumes, config) {
+  const el = document.getElementById('resumeAssignments');
+  const types = ['internship', 'informational', 'networking', 'referral'];
+  const assignments = config.assignments || {};
+  const options = resumes.map(r => `<option value="${r.filename}" ${assignments[r.filename] === r.filename ? 'selected' : ''}>${r.filename}</option>`).join('');
+
+  el.innerHTML = types.map(type => `
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:120px;font-size:13px;font-weight:500;color:#334155;text-transform:capitalize">${type}</div>
+      <select class="form-select" id="assign-${type}" style="flex:1">
+        <option value="">— use default —</option>
+        ${resumes.map(r => `<option value="${r.filename}" ${assignments[type] === r.filename ? 'selected' : ''}>${r.filename}</option>`).join('')}
+      </select>
+    </div>
+  `).join('');
+}
+
+async function loadResumePickerForCompose(resumes) {
+  const picker = document.getElementById('resumePicker');
+  if (!picker) return;
+  if (!resumes) {
+    const data = await api('/api/resumes');
+    resumes = data.resumes || [];
+    _resumeConfig = data.config || { default: '', assignments: {} };
+  }
+  const emailType = document.getElementById('emailType')?.value || 'internship';
+  const assigned = _resumeConfig.assignments?.[emailType] || _resumeConfig.default || '';
+  picker.innerHTML = resumes.map(r =>
+    `<option value="${r.filename}" ${r.filename === assigned ? 'selected' : ''}>${r.filename}${r.is_default ? ' (default)' : ''}</option>`
+  ).join('') || '<option value="">No resumes uploaded</option>';
+}
+
+function updateResumeForType() {
+  // Auto-select the assigned resume when email type changes
+  const emailType = document.getElementById('emailType')?.value || 'internship';
+  const assigned = _resumeConfig.assignments?.[emailType] || _resumeConfig.default || '';
+  const picker = document.getElementById('resumePicker');
+  if (picker && assigned) picker.value = assigned;
+}
+
+function previewResume(filename) {
+  const modal = document.getElementById('resumePreviewModal');
+  const frame = document.getElementById('resumePreviewFrame');
+  const title = document.getElementById('resumePreviewTitle');
+  title.textContent = filename;
+  frame.src = `/api/resumes/file/${encodeURIComponent(filename)}`;
+  modal.style.display = 'flex';
+}
+
+function closeResumePreview() {
+  const modal = document.getElementById('resumePreviewModal');
+  document.getElementById('resumePreviewFrame').src = '';
+  modal.style.display = 'none';
+}
+
+async function uploadResume() {
+  const input = document.getElementById('resumeFileInput');
+  const resultEl = document.getElementById('uploadResult');
+  if (!input.files.length) { alert('Select a PDF file first.'); return; }
+  const formData = new FormData();
+  formData.append('file', input.files[0]);
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = '<div class="alert alert-info">Uploading...</div>';
+  try {
+    const res = await fetch('/api/resumes/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.uploaded) {
+      resultEl.innerHTML = `<div class="alert alert-success">✅ Uploaded: ${data.filename}</div>`;
+      input.value = '';
+      await loadResumeManager();
+    } else {
+      resultEl.innerHTML = `<div class="alert alert-danger">❌ ${data.error}</div>`;
+    }
+  } catch(e) {
+    resultEl.innerHTML = `<div class="alert alert-danger">❌ Upload failed: ${e.message}</div>`;
+  }
+}
+
+async function setDefault(filename) {
+  await api('/api/resumes/config', 'POST', { default: filename });
+  await loadResumeManager();
+}
+
+async function deleteResume(filename) {
+  if (!confirm(`Delete "${filename}"? This can't be undone.`)) return;
+  const data = await api('/api/resumes/delete', 'POST', { filename });
+  if (data.deleted) await loadResumeManager();
+  else alert('Delete failed: ' + (data.error || 'unknown error'));
+}
+
+async function renameResume(oldName) {
+  const newName = prompt('New filename (without .pdf extension):', oldName.replace('.pdf',''));
+  if (!newName || newName.trim() === oldName.replace('.pdf','')) return;
+  const data = await api('/api/resumes/rename', 'POST', { old_name: oldName, new_name: newName.trim() });
+  if (data.renamed) await loadResumeManager();
+  else alert('Rename failed: ' + (data.error || 'unknown error'));
+}
+
+async function saveAssignments() {
+  const types = ['internship', 'informational', 'networking', 'referral'];
+  const assignments = {};
+  types.forEach(t => {
+    const val = document.getElementById(`assign-${t}`)?.value;
+    if (val) assignments[t] = val;
+  });
+  const data = await api('/api/resumes/config', 'POST', { assignments });
+  const el = document.getElementById('assignResult');
+  el.style.display = 'block';
+  el.innerHTML = data.saved
+    ? '<div class="alert alert-success">✅ Assignments saved</div>'
+    : '<div class="alert alert-danger">❌ Save failed</div>';
+  setTimeout(() => { el.style.display = 'none'; }, 3000);
+  _resumeConfig = data.config || _resumeConfig;
+  await loadResumePickerForCompose();
+}
 </script>
+
+<!-- ═══ RESUME PREVIEW MODAL ═══ -->
+<div id="resumePreviewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:min(860px,95vw);height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.4)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #e2e8f0;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg style="width:18px;height:18px;color:#e11d48" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+        <span id="resumePreviewTitle" style="font-size:14px;font-weight:600;color:#1e293b"></span>
+      </div>
+      <button onclick="closeResumePreview()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#64748b;line-height:1">×</button>
+    </div>
+    <iframe id="resumePreviewFrame" src="" style="flex:1;border:none;width:100%"></iframe>
+  </div>
+</div>
+
 </body>
 </html>

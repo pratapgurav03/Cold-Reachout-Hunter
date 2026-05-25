@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: cold-reachout-hunter
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: HUNTER_API_KEY
+        sync: false
+      - key: SERPAPI_KEY
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+      - key: RAPIDAPI_KEY
+        sync: false
+      - key: FLASK_ENV
+        value: production

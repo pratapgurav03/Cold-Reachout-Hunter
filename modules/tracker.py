@@ -28,6 +28,7 @@ COLUMNS = [
     "notes",
     "follow_up_date",
     "response_received",
+    "message_id",      # Message-ID header for thread continuation
 ]
 
 DEFAULT_LOG_PATH = Path(__file__).parent.parent / "outreach_log.csv"
@@ -56,7 +57,8 @@ class OutreachTracker:
         subject: str = "",
         status: str = "sent",
         notes: str = "",
-        follow_up_days: int = 7
+        follow_up_days: int = 7,
+        message_id: str = ""
     ) -> dict:
         """
         Log a sent or drafted email to the tracker.
@@ -78,6 +80,7 @@ class OutreachTracker:
             "notes": notes,
             "follow_up_date": follow_up_date,
             "response_received": "",
+            "message_id": message_id,
         }
 
         with open(self.log_path, "a", newline="", encoding="utf-8") as f:
