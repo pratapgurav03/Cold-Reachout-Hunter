@@ -277,6 +277,111 @@ def send_via_smtp(
         return None
 
 
+def _get_oauth_creds(token_json: str):
+    """Load OAuth credentials from stored JSON, auto-refresh if expired."""
+    from google.oauth2.credentials import Credentials
+    from google.auth.transport.requests import Request
+
+    SCOPES = [
+        "https://www.googleapis.com/auth/gmail.send",
+        "https://www.googleapis.com/auth/gmail.compose",
+    ]
+    creds = Credentials.from_authorized_user_info(json.loads(token_json), SCOPES)
+    if creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+    return creds
+
+
+def save_draft_via_gmail_oauth(
+    token_json: str,
+    to_email: str,
+    to_name: str,
+    subject: str,
+    body_text: str,
+    body_html: Optional[str] = None,
+    resume_path: Optional[Path] = None,
+    from_email: Optional[str] = None,
+    from_name: Optional[str] = None,
+    in_reply_to: Optional[str] = None,
+    references: Optional[str] = None,
+) -> Optional[str]:
+    """
+    Save email as Gmail draft using stored OAuth token.
+    Returns the Message-ID header string on success, None on failure.
+    """
+    try:
+        from googleapiclient.discovery import build
+
+        creds = _get_oauth_creds(token_json)
+        service = build("gmail", "v1", credentials=creds)
+
+        message_id = make_msgid(domain="gmail.com")
+        msg = _build_message(
+            to_email, to_name, subject, body_text, body_html, resume_path,
+            in_reply_to=in_reply_to, references=references, message_id=message_id,
+        )
+        _fe = from_email or SENDER_EMAIL
+        _fn = from_name  or SENDER_NAME
+        msg.replace_header("From", f"{_fn} <{_fe}>")
+        msg.replace_header("Reply-To", _fe)
+
+        raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("utf-8")
+        service.users().drafts().create(
+            userId="me", body={"message": {"raw": raw}}
+        ).execute()
+
+        print(f"  ✅ [OAuth] Draft saved to Gmail for {to_name} <{to_email}>")
+        return message_id
+    except Exception as e:
+        print(f"  ❌ [OAuth] Draft failed: {e}")
+        return None
+
+
+def send_via_gmail_oauth(
+    token_json: str,
+    to_email: str,
+    to_name: str,
+    subject: str,
+    body_text: str,
+    body_html: Optional[str] = None,
+    resume_path: Optional[Path] = None,
+    from_email: Optional[str] = None,
+    from_name: Optional[str] = None,
+    in_reply_to: Optional[str] = None,
+    references: Optional[str] = None,
+) -> Optional[str]:
+    """
+    Send email via Gmail API using stored OAuth token.
+    Returns the Message-ID header string on success, None on failure.
+    """
+    try:
+        from googleapiclient.discovery import build
+
+        creds = _get_oauth_creds(token_json)
+        service = build("gmail", "v1", credentials=creds)
+
+        message_id = make_msgid(domain="gmail.com")
+        msg = _build_message(
+            to_email, to_name, subject, body_text, body_html, resume_path,
+            in_reply_to=in_reply_to, references=references, message_id=message_id,
+        )
+        _fe = from_email or SENDER_EMAIL
+        _fn = from_name  or SENDER_NAME
+        msg.replace_header("From", f"{_fn} <{_fe}>")
+        msg.replace_header("Reply-To", _fe)
+
+        raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("utf-8")
+        service.users().messages().send(
+            userId="me", body={"raw": raw}
+        ).execute()
+
+        print(f"  ✅ [OAuth] Sent to {to_name} <{to_email}>")
+        return message_id
+    except Exception as e:
+        print(f"  ❌ [OAuth] Send failed: {e}")
+        return None
+
+
 def save_draft_file(
     to_email: str,
     to_name: str,

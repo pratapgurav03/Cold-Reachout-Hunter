@@ -21,5 +21,15 @@ services:
         sync: false
       - key: SENDER_NAME
         sync: false
+      - key: DATABASE_URL
+        sync: false          # Set to your Supabase/PostgreSQL connection string
+      - key: SECRET_KEY
+        sync: false          # Set a long random string for session security
       - key: FLASK_ENV
         value: production
+      - key: GOOGLE_CLIENT_ID
+        sync: false          # From Google Cloud Console → APIs → Credentials → OAuth 2.0
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false          # Set to: https://<your-app>.onrender.com/auth/gmail/callback

@@ -250,6 +250,15 @@
   .sender-popover .form-input:focus { border-color: var(--lime); background: rgba(255,255,255,0.09); }
   .sender-popover .pw-hint { font-size: 10px; color: rgba(255,255,255,0.25); margin-top: 4px; }
   .sender-popover .pw-hint a { color: var(--lime); text-decoration: none; }
+  .gmail-connect-box { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); }
+  .gmail-connect-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; display: block; }
+  .btn-gmail { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 14px; background: #fff; color: #1f1f1f; border: none; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font-body); transition: opacity 0.15s; }
+  .btn-gmail:hover { opacity: 0.9; }
+  .btn-gmail svg { flex-shrink: 0; }
+  .gmail-connected-badge { display: flex; align-items: center; justify-content: space-between; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); border-radius: 4px; padding: 8px 12px; }
+  .gmail-connected-info { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6ee7b7; }
+  .gmail-disconnect { font-size: 11px; color: rgba(255,255,255,0.3); cursor: pointer; text-decoration: underline; background: none; border: none; font-family: var(--font-body); }
+  .gmail-disconnect:hover { color: #f87171; }
   .sender-popover-actions { display: flex; gap: 8px; margin-top: 16px; }
 
   /* ─── PAGE BACKGROUND (section-specific) ─── */
@@ -302,19 +311,34 @@
           <label class="form-label">Display Name</label>
           <input class="form-input" id="spName" type="text" placeholder="Your Name">
         </div>
-        <div class="form-group">
-          <label class="form-label">App Password <span style="color:rgba(255,255,255,0.3)">(leave blank to keep current)</span></label>
-          <input class="form-input" id="spPassword" type="password" placeholder="xxxx xxxx xxxx xxxx">
-          <div class="pw-hint">Need one? <a href="https://myaccount.google.com/apppasswords" target="_blank">myaccount.google.com/apppasswords</a></div>
+        <div class="gmail-connect-box">
+          <span class="gmail-connect-label">Gmail Authorization</span>
+          <div id="gmailNotConnected">
+            <button class="btn-gmail" onclick="connectGmail()">
+              <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 24.7L6.3 12H41.7L24 24.7z"/><path fill="#FBBC05" d="M6 12v24l9-12L6 12z"/><path fill="#34A853" d="M42 12v24l-9-12 9-12z"/><path fill="#4285F4" d="M6 36h36l-18-12L6 36z"/></svg>
+              Connect Gmail Account
+            </button>
+            <div class="pw-hint" style="margin-top:6px">Authorizes sending &amp; drafts from your Gmail. No password needed.</div>
+          </div>
+          <div id="gmailConnected" style="display:none">
+            <div class="gmail-connected-badge">
+              <div class="gmail-connected-info">
+                <span>✓</span>
+                <span id="gmailConnectedEmail"></span>
+              </div>
+              <button class="gmail-disconnect" onclick="disconnectGmail()">Disconnect</button>
+            </div>
+          </div>
         </div>
         <div class="sender-popover-actions">
-          <button class="btn btn-success btn-sm" onclick="saveSenderConfig()">Save & Switch</button>
+          <button class="btn btn-success btn-sm" onclick="saveSenderConfig()">Save Name</button>
           <button class="btn btn-ghost btn-sm" onclick="closeSenderPopover()">Cancel</button>
         </div>
         <div id="spFeedback" style="margin-top:10px;font-size:12px"></div>
       </div>
     </div>
     <button class="btn btn-success btn-sm" onclick="showSection('hunt')">Hunt Now</button>
+    <button class="btn btn-ghost btn-sm" onclick="logoutUser()" title="Sign out" style="padding:6px 10px;font-size:11px;opacity:0.6">⏻</button>
   </div>
 </nav>
 
@@ -704,6 +728,8 @@
 </div>
 
 <script>
+// Injected by server
+window._userId = {{ user.id }};
 // ─── STATE ─────────────────────────────────────────────────────────────────
 const state = {
   profile: null,
@@ -785,13 +811,18 @@ async function loadConfig() {
   };
   set('dotAnthropic', cfg.anthropic_key);
   set('dotHunter', cfg.hunter_key);
-  set('dotGmail', cfg.gmail_password);
+  set('dotGmail', cfg.gmail_connected || cfg.gmail_password);
   set('dotResume', cfg.resume_found);
-  // Update nav email label
   if (cfg.sender_email) {
     const lbl = document.getElementById('sendingAsEmail');
     if (lbl) lbl.textContent = cfg.sender_email;
   }
+}
+
+// ─── LOGOUT ───────────────────────────────────────────────────────────────
+async function logoutUser() {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  window.location.href = '/auth';
 }
 
 // ─── SENDER SWITCHER ───────────────────────────────────────────────────────
@@ -801,18 +832,45 @@ function toggleSenderPopover(e) {
   e.stopPropagation();
   const pop = document.getElementById('senderPopover');
   if (_senderPopoverOpen) { closeSenderPopover(); return; }
-  // Pre-fill with current values
-  api('/api/sender-config').then(cfg => {
+  // Pre-fill with current values and Gmail status
+  Promise.all([api('/api/sender-config'), api('/api/gmail-status')]).then(([cfg, gmail]) => {
     document.getElementById('spEmail').value = cfg.sender_email || '';
     document.getElementById('spName').value  = cfg.sender_name  || '';
-    document.getElementById('spPassword').value = '';
-    document.getElementById('spFeedback').textContent = cfg.has_password
-      ? '✓ App password already set' : '⚠ No app password — set one to send/draft';
-    document.getElementById('spFeedback').style.color = cfg.has_password
-      ? 'rgba(52,211,153,0.9)' : 'rgba(245,158,11,0.9)';
+    _renderGmailStatus(gmail);
   });
   pop.classList.add('open');
   _senderPopoverOpen = true;
+}
+
+function _renderGmailStatus(gmail) {
+  const notConn = document.getElementById('gmailNotConnected');
+  const conn    = document.getElementById('gmailConnected');
+  const emailEl = document.getElementById('gmailConnectedEmail');
+  if (gmail.connected) {
+    notConn.style.display = 'none';
+    conn.style.display    = 'block';
+    emailEl.textContent   = gmail.gmail_email || 'Gmail connected';
+  } else {
+    notConn.style.display = 'block';
+    conn.style.display    = 'none';
+  }
+}
+
+function connectGmail() {
+  // Save name/email first so they're set when we come back from OAuth
+  const email = document.getElementById('spEmail').value.trim();
+  const name  = document.getElementById('spName').value.trim();
+  if (email) api('/api/sender-config', 'POST', { sender_email: email, sender_name: name });
+  window.location.href = '/auth/gmail';
+}
+
+async function disconnectGmail() {
+  const fb = document.getElementById('spFeedback');
+  fb.textContent = 'Disconnecting…'; fb.style.color = 'rgba(255,255,255,0.4)';
+  await api('/api/gmail-disconnect', 'POST', {});
+  _renderGmailStatus({ connected: false });
+  fb.textContent = 'Gmail disconnected.'; fb.style.color = 'rgba(245,158,11,0.9)';
+  loadConfig();
 }
 
 function closeSenderPopover() {
@@ -821,28 +879,43 @@ function closeSenderPopover() {
 }
 
 async function saveSenderConfig() {
+  const name = document.getElementById('spName').value.trim();
   const email = document.getElementById('spEmail').value.trim();
-  const name  = document.getElementById('spName').value.trim();
-  const pw    = document.getElementById('spPassword').value.trim();
-  const fb    = document.getElementById('spFeedback');
-
+  const fb   = document.getElementById('spFeedback');
   if (!email) { fb.textContent = 'Email is required.'; fb.style.color = '#f87171'; return; }
-
   fb.textContent = 'Saving…'; fb.style.color = 'rgba(255,255,255,0.4)';
-  const payload = { sender_email: email, sender_name: name };
-  if (pw) payload.app_password = pw;
-
-  const res = await api('/api/sender-config', 'POST', payload);
+  const res = await api('/api/sender-config', 'POST', { sender_email: email, sender_name: name });
   if (res.ok) {
     document.getElementById('sendingAsEmail').textContent = res.sender_email;
-    fb.textContent = '✓ Switched to ' + res.sender_email;
-    fb.style.color = 'rgba(52,211,153,0.9)';
-    setTimeout(closeSenderPopover, 1200);
-    loadConfig(); // refresh dots
+    fb.textContent = '✓ Saved'; fb.style.color = 'rgba(52,211,153,0.9)';
+    setTimeout(closeSenderPopover, 1000);
+    loadConfig();
   } else {
-    fb.textContent = 'Save failed. Try again.'; fb.style.color = '#f87171';
+    fb.textContent = 'Save failed.'; fb.style.color = '#f87171';
   }
 }
+
+// Handle ?gmail_connected=1 redirect from OAuth callback
+(function() {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('gmail_connected') === '1') {
+    history.replaceState({}, '', '/');
+    // Brief toast
+    setTimeout(() => {
+      const t = document.createElement('div');
+      t.textContent = '✓ Gmail connected!';
+      Object.assign(t.style, {
+        position:'fixed', bottom:'28px', left:'50%', transform:'translateX(-50%)',
+        background:'rgba(16,185,129,0.95)', color:'#fff', padding:'10px 22px',
+        borderRadius:'6px', fontWeight:'600', fontSize:'13px', zIndex:'9999',
+        boxShadow:'0 4px 20px rgba(0,0,0,0.4)'
+      });
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }, 400);
+    loadConfig();
+  }
+})();
 
 // Close popover when clicking outside
 document.addEventListener('click', (e) => {
@@ -1511,7 +1584,8 @@ function previewResume(filename) {
   const frame = document.getElementById('resumePreviewFrame');
   const title = document.getElementById('resumePreviewTitle');
   title.textContent = filename;
-  frame.src = `/api/resumes/file/${encodeURIComponent(filename)}`;
+  // user id is injected server-side via the route
+  frame.src = `/api/resumes/file/${window._userId || 0}/${encodeURIComponent(filename)}`;
   modal.style.display = 'flex';
 }
 
