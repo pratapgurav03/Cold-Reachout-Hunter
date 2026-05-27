@@ -19,6 +19,13 @@ hunt_*.json
 outreach_log.csv
 seen_people.json
 
+# Database (SQLite local dev — use PostgreSQL on Render)
+*.db
+*.sqlite3
+
+# User-uploaded resumes (personal files, also ephemeral on Render)
+resumes/
+
 # macOS
 .DS_Store
 
