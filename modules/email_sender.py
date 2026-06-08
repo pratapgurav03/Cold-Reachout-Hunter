@@ -334,7 +334,7 @@ def save_draft_via_gmail_oauth(
         return message_id
     except Exception as e:
         print(f"  ❌ [OAuth] Draft failed: {e}")
-        return None
+        raise  # propagate so caller can show the real error
 
 
 def send_via_gmail_oauth(

@@ -488,15 +488,20 @@ def api_save_draft():
     # Priority: OAuth → SMTP App Password → local fallback
     message_id = None
     method_note = ""
+    oauth_error = None
 
     if gmail_token:
-        message_id  = save_draft_via_gmail_oauth(
-            token_json=gmail_token,
-            to_email=to_email, to_name=to_name, subject=subject, body_text=body,
-            resume_path=rp,
-            from_email=scfg.get("sender_email"), from_name=scfg.get("sender_name"),
-        )
-        method_note = "Saved to Gmail Drafts via OAuth ✓"
+        try:
+            message_id = save_draft_via_gmail_oauth(
+                token_json=gmail_token,
+                to_email=to_email, to_name=to_name, subject=subject, body_text=body,
+                resume_path=rp,
+                from_email=scfg.get("sender_email"), from_name=scfg.get("sender_name"),
+            )
+            method_note = "Saved to Gmail Drafts via OAuth ✓"
+        except Exception as e:
+            oauth_error = str(e)
+            print(f"  ❌ OAuth draft error: {e}")
     elif app_password:
         message_id  = save_draft_to_gmail(
             to_email=to_email, to_name=to_name, subject=subject, body_text=body,
@@ -518,8 +523,14 @@ def api_save_draft():
     # Fallback: local draft file
     drafts_folder = str(Path(__file__).parent / "drafts")
     draft_file = save_draft_file(to_email, to_name, subject, body, drafts_folder)
+    fallback_msg = Path(draft_file).name
+    if oauth_error:
+        # Surface the real error so the user can reconnect or fix the issue
+        return jsonify({"saved": True, "draft_file": draft_file,
+                        "message": f"⚠️ Gmail OAuth failed — {oauth_error} | Draft saved locally: {fallback_msg}",
+                        "oauth_error": oauth_error})
     return jsonify({"saved": True, "draft_file": draft_file,
-                    "message": f"Draft saved locally: {Path(draft_file).name}"})
+                    "message": f"Draft saved locally: {fallback_msg}"})
 
 
 # ─── Send Email ───────────────────────────────────────────────────────────────

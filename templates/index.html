@@ -1252,8 +1252,52 @@ async function findEmail() {
     s3.style.pointerEvents = 'auto';
     document.getElementById('step4Card').style.display = 'block';
   } else {
-    el.innerHTML = `<div class="alert alert-warning">Couldn't find email automatically. Enter it manually above then click Generate.</div>`;
+    // Build name parts from loaded profile for client-side pattern guessing
+    const pName = (state.profile && state.profile.name) ? state.profile.name : '';
+    const nameParts = pName.trim().split(/\s+/);
+    const first = (nameParts[0] || '').toLowerCase().replace(/[^a-z]/g, '');
+    const last  = (nameParts[nameParts.length - 1] || '').toLowerCase().replace(/[^a-z]/g, '');
+    const patternBlock = (first && last) ? `
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08)">
+        <div style="font-size:12px;opacity:0.7;margin-bottom:8px">Suggest patterns — enter the company domain:</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="form-input" id="domainHintInput" placeholder="e.g. google.com, siemensenergy.com"
+                 style="flex:1;height:34px;font-size:13px"
+                 onkeydown="if(event.key==='Enter') suggestEmailPatterns('${first}','${last}')">
+          <button class="btn btn-ghost btn-sm" onclick="suggestEmailPatterns('${first}','${last}')">Suggest →</button>
+        </div>
+        <div id="emailPatternChips" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>` : '';
+    el.innerHTML = `<div class="alert alert-warning">Couldn't find email automatically. Enter it manually above, or use the pattern suggester below.${patternBlock}</div>`;
   }
+}
+
+function suggestEmailPatterns(first, last) {
+  const domain = (document.getElementById('domainHintInput').value || '').trim();
+  if (!domain) { alert('Enter a domain first, e.g. google.com'); return; }
+  const f = first[0] || '';
+  const patterns = [
+    `${first}.${last}@${domain}`,
+    `${first}${last}@${domain}`,
+    `${f}${last}@${domain}`,
+    `${first}@${domain}`,
+    `${first}-${last}@${domain}`,
+    `${last}.${first}@${domain}`,
+  ];
+  document.getElementById('emailPatternChips').innerHTML = patterns.map(email =>
+    `<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px;font-family:monospace"
+      onclick="selectEmailPattern('${email}')">${email}</button>`
+  ).join('');
+}
+
+function selectEmailPattern(email) {
+  document.getElementById('targetEmail').value = email;
+  const s3 = document.getElementById('step3Card');
+  s3.style.opacity = '1';
+  s3.style.pointerEvents = 'auto';
+  document.getElementById('step4Card').style.display = 'block';
+  const el = document.getElementById('emailFinderResult');
+  if (el) el.innerHTML = `<div class="alert alert-info">Using pattern guess: <strong>${email}</strong> — verify before sending.</div>`;
 }
 
 async function generateEmail() {

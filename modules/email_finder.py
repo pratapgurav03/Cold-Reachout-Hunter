@@ -45,8 +45,21 @@ def _get_company_domain(company_name: str) -> Optional[str]:
     Try to guess the primary domain for a company.
     Uses a few heuristics + a fallback web lookup.
     """
-    # Clean company name — strip everything non-alphanumeric
-    clean = company_name.lower()
+    raw = company_name.strip().lower()
+
+    # If company_name already looks like a domain (e.g. "Google.org", "github.io"),
+    # try it directly before falling back to name-munging.
+    domain_re = re.compile(r'^[a-z0-9][a-z0-9\-]*\.[a-z]{2,}$')
+    raw_nodot = raw.replace(' ', '')
+    if domain_re.match(raw_nodot):
+        try:
+            socket.gethostbyname(raw_nodot)
+            return raw_nodot
+        except (socket.gaierror, UnicodeError):
+            pass
+
+    # Clean company name — strip stop-words and non-alphanumeric chars
+    clean = raw
     clean = re.sub(r"\b(inc|llc|ltd|corp|co|company|the|&|and)\b", "", clean)
     clean = re.sub(r"[^a-z0-9]", "", clean.strip())
 
