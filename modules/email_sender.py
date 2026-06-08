@@ -333,7 +333,9 @@ def save_draft_via_gmail_oauth(
         print(f"  ✅ [OAuth] Draft saved to Gmail for {to_name} <{to_email}>")
         return message_id
     except Exception as e:
-        print(f"  ❌ [OAuth] Draft failed: {e}")
+        import traceback
+        print(f"  ❌ [OAuth] Draft failed ({type(e).__name__}): {e}")
+        traceback.print_exc()
         raise  # propagate so caller can show the real error
 
 

@@ -500,8 +500,20 @@ def api_save_draft():
             )
             method_note = "Saved to Gmail Drafts via OAuth ✓"
         except Exception as e:
-            oauth_error = str(e)
-            print(f"  ❌ OAuth draft error: {e}")
+            oauth_error = f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
+            print(f"  ❌ OAuth draft error ({type(e).__name__}): {e}")
+            # If it's an auth/token error, wipe the bad token so the user is
+            # prompted to reconnect rather than seeing this on every draft.
+            err_str = str(e).lower()
+            if any(k in err_str for k in ("invalid_grant", "token", "expired", "revoked", "401", "unauthorized", "credentials")):
+                try:
+                    bad_token = GmailToken.query.filter_by(user_id=current_user.id).first()
+                    if bad_token:
+                        db.session.delete(bad_token)
+                        db.session.commit()
+                        oauth_error += " — your Gmail connection has been reset, please reconnect."
+                except Exception:
+                    pass
     elif app_password:
         message_id  = save_draft_to_gmail(
             to_email=to_email, to_name=to_name, subject=subject, body_text=body,
