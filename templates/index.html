@@ -416,10 +416,14 @@
       </div>
       <div class="card">
         <div class="step-label"><span class="step-num">1</span> Search for people at a company</div>
-        <div class="form-row">
+        <div class="form-row" style="grid-template-columns: 2fr 1.5fr 1fr;">
           <div class="form-group">
             <label class="form-label">Company Name</label>
             <input class="form-input" id="huntCompany" placeholder="e.g. Siemens Energy, Google, McKinsey" onkeydown="if(event.key==='Enter') runHunt()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">City / State <span style="opacity:0.5;font-weight:400">(optional)</span></label>
+            <input class="form-input" id="huntLocation" placeholder="e.g. New York, Houston, California" onkeydown="if(event.key==='Enter') runHunt()">
           </div>
           <div class="form-group">
             <label class="form-label">Max Results</label>
@@ -434,7 +438,7 @@
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
           Hunt on LinkedIn
         </button>
-        <p class="text-muted" style="margin-top:10px">Uses Scrapin.io + Google Search — no browser needed.</p>
+        <p class="text-muted" style="margin-top:10px">Uses Scrapin.io + Google Search — no browser needed. Location narrows results to that city or state.</p>
       </div>
 
       <div id="huntLoading" style="display:none" class="loading">
@@ -974,11 +978,12 @@ async function loadDashboard() {
 
 // ─── HUNT ──────────────────────────────────────────────────────────────────
 async function runHunt() {
-  const company = document.getElementById('huntCompany').value.trim();
+  const company  = document.getElementById('huntCompany').value.trim();
   if (!company) return alert('Enter a company name first.');
 
-  const max = parseInt(document.getElementById('huntMax').value);
-  const btn = document.getElementById('huntBtn');
+  const location = document.getElementById('huntLocation').value.trim();
+  const max      = parseInt(document.getElementById('huntMax').value);
+  const btn      = document.getElementById('huntBtn');
 
   btn.disabled = true;
   btn.textContent = 'Hunting...';
@@ -986,7 +991,9 @@ async function runHunt() {
   document.getElementById('huntResults').style.display = 'none';
 
   try {
-    const data = await api('/api/hunt', 'POST', { company, max_results: max });
+    const payload = { company, max_results: max };
+    if (location) payload.location = location;
+    const data = await api('/api/hunt', 'POST', payload);
     document.getElementById('huntLoading').style.display = 'none';
 
     if (data.error) {
@@ -998,7 +1005,8 @@ async function runHunt() {
     window._lastHuntResults = results;
     window._lastHuntCompany = company;
 
-    document.getElementById('huntResultsTitle').textContent = `${results.length} people found at ${company}`;
+    const locLabel = location ? ` · ${location}` : '';
+    document.getElementById('huntResultsTitle').textContent = `${results.length} people found at ${company}${locLabel}`;
 
     // Show / update Draft All button
     let draftAllBtn = document.getElementById('draftAllBtn');

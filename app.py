@@ -383,12 +383,13 @@ def api_hunt():
     data = request.json or {}
     company     = data.get("company", "").strip()
     max_results = int(data.get("max_results", 10))
+    location    = data.get("location", "").strip()
     if not company:
         return jsonify({"error": "Company name required"}), 400
     try:
         scraper = LinkedInScraper(headless=False)
-        people  = scraper.search_people_at_company(company, max_results=max_results)
-        return jsonify({"company": company, "results": people})
+        people  = scraper.search_people_at_company(company, max_results=max_results, location=location)
+        return jsonify({"company": company, "location": location, "results": people})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

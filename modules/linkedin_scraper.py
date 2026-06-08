@@ -531,25 +531,27 @@ class LinkedInScraper:
     def search_people_at_company(
         self,
         company_name: str,
-        max_results: int = 10
+        max_results: int = 10,
+        location: str = "",
     ) -> list[dict]:
         """
-        Find people to target at a company.
+        Find people to target at a company, optionally filtered by city/state/region.
         Rotates role groups + SerpAPI pagination to return fresh faces each time.
         Uses SerpAPI (preferred) or Google Custom Search as fallback.
         """
         if self.serpapi_key:
-            return self._hunt_via_serpapi(company_name, max_results)
+            return self._hunt_via_serpapi(company_name, max_results, location)
         elif self.google_api_key and self.google_cse_id:
-            return self._hunt_via_google(company_name, max_results)
+            return self._hunt_via_google(company_name, max_results, location)
         else:
             raise ValueError(
                 "Set SERPAPI_KEY (free, 250 searches at serpapi.com) to use the hunt feature."
             )
 
-    def _hunt_via_serpapi(self, company_name: str, max_results: int) -> list[dict]:
+    def _hunt_via_serpapi(self, company_name: str, max_results: int, location: str = "") -> list[dict]:
         """Use SerpAPI to find LinkedIn profiles at a company — always fresh faces."""
-        print(f"  Searching via SerpAPI for people at {company_name}...")
+        loc_label = f" in {location}" if location else ""
+        print(f"  Searching via SerpAPI for people at {company_name}{loc_label}...")
 
         # Pick which role group to use based on how many times this company's been searched
         seen = self._load_seen()
@@ -562,6 +564,10 @@ class LinkedInScraper:
 
         print(f"  Role group #{search_count % len(self._ROLE_GROUPS)}, offset={start_offset}")
 
+        # Build location clause — wrap in quotes for exact phrase matching
+        loc_clause = f' "{location.strip()}"' if location.strip() else ""
+        base_query = f'site:linkedin.com/in "{company_name}" ({role_terms}){loc_clause}'
+
         all_results = []
 
         # Fetch up to 2 pages to get enough fresh results after filtering
@@ -571,7 +577,7 @@ class LinkedInScraper:
                 params={
                     "api_key": self.serpapi_key,
                     "engine": "google",
-                    "q": f'site:linkedin.com/in "{company_name}" ({role_terms})',
+                    "q": base_query,
                     "num": 10,
                     "start": start,
                     "gl": "us",
@@ -638,16 +644,18 @@ class LinkedInScraper:
 
         return final
 
-    def _hunt_via_google(self, company_name: str, max_results: int) -> list[dict]:
+    def _hunt_via_google(self, company_name: str, max_results: int, location: str = "") -> list[dict]:
         """Use Google Custom Search API to find LinkedIn profiles at a company."""
-        print(f"  Searching Google for people at {company_name}...")
+        loc_label = f" in {location}" if location else ""
+        print(f"  Searching Google for people at {company_name}{loc_label}...")
 
         role_terms = (
             '"program manager" OR "product manager" OR "technical program manager" '
             'OR "chief of staff" OR "recruiter" OR "talent acquisition" '
             'OR "engineering manager" OR "director" OR "operations"'
         )
-        query = f'site:linkedin.com/in "{company_name}" ({role_terms})'
+        loc_clause = f' "{location.strip()}"' if location.strip() else ""
+        query = f'site:linkedin.com/in "{company_name}" ({role_terms}){loc_clause}'
 
         response = requests.get(
             "https://www.googleapis.com/customsearch/v1",
