@@ -237,6 +237,16 @@ def gmail_oauth_start():
     )
     session["oauth_state"]   = state
     session["oauth_user_id"] = current_user.id
+    # Store PKCE code_verifier so the callback can complete the exchange.
+    # google-auth-oauthlib >= 1.0 auto-generates one; the callback creates a
+    # fresh Flow object so we must carry the verifier across via session.
+    try:
+        cv = flow.code_verifier
+        if cv:
+            session["oauth_code_verifier"] = cv
+    except Exception:
+        pass
+    session.modified = True
     return redirect(auth_url)
 
 
@@ -249,7 +259,14 @@ def gmail_oauth_callback():
 
     try:
         flow = _gmail_flow()
-        flow.fetch_token(authorization_response=request.url)
+        # Restore PKCE code_verifier that was generated during the initial redirect.
+        # Without this, google-auth-oauthlib sends no verifier and Google rejects
+        # the token exchange with "Missing code verifier".
+        code_verifier = session.get("oauth_code_verifier")
+        flow.fetch_token(
+            authorization_response=request.url,
+            code_verifier=code_verifier,
+        )
         creds = flow.credentials
     except Exception as e:
         return f"OAuth error: {e}", 400
