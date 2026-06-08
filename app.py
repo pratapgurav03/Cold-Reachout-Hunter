@@ -577,14 +577,40 @@ def api_send():
         resume_path = _get_resume_for_type(current_user.id, email_type)
         rp = resume_path if resume_path and resume_path.exists() else None
 
+        oauth_send_error = None
         if gmail_token:
-            message_id = send_via_gmail_oauth(
-                token_json=gmail_token,
-                to_email=to_email, to_name=to_name, subject=subject,
-                body_text=body_text, body_html=body_html or None,
-                resume_path=rp,
-                from_email=scfg.get("sender_email"), from_name=scfg.get("sender_name"),
-            )
+            try:
+                message_id = send_via_gmail_oauth(
+                    token_json=gmail_token,
+                    to_email=to_email, to_name=to_name, subject=subject,
+                    body_text=body_text, body_html=body_html or None,
+                    resume_path=rp,
+                    from_email=scfg.get("sender_email"), from_name=scfg.get("sender_name"),
+                )
+            except Exception as oauth_exc:
+                err_msg = str(oauth_exc)
+                oauth_send_error = f"{type(oauth_exc).__name__}: {err_msg}" if err_msg else type(oauth_exc).__name__
+                print(f"  ❌ OAuth send error ({type(oauth_exc).__name__}): {err_msg}")
+                # Auto-clear bad token on auth errors
+                err_lower = err_msg.lower()
+                if any(k in err_lower for k in ("invalid_grant", "token", "expired", "revoked", "401", "unauthorized", "credentials")):
+                    try:
+                        bad_token = GmailToken.query.filter_by(user_id=current_user.id).first()
+                        if bad_token:
+                            db.session.delete(bad_token)
+                            db.session.commit()
+                            oauth_send_error += " — Gmail connection reset, please reconnect."
+                    except Exception:
+                        pass
+                tracker.log_outreach(
+                    target_name=to_name, target_email=to_email, user_id=current_user.id,
+                    target_title=target_title, target_company=target_company,
+                    linkedin_url=linkedin_url, email_type=email_type,
+                    subject=subject, status="failed", notes=notes, message_id=""
+                )
+                return jsonify({"success": False, "status": "failed",
+                                "message": f"❌ Gmail OAuth failed — {oauth_send_error}",
+                                "oauth_error": oauth_send_error}), 500
         else:
             message_id = send_via_smtp(
                 to_email=to_email, to_name=to_name, subject=subject,

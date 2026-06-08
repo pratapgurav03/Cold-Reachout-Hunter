@@ -380,8 +380,10 @@ def send_via_gmail_oauth(
         print(f"  ✅ [OAuth] Sent to {to_name} <{to_email}>")
         return message_id
     except Exception as e:
-        print(f"  ❌ [OAuth] Send failed: {e}")
-        return None
+        import traceback
+        print(f"  ❌ [OAuth] Send failed ({type(e).__name__}): {e}")
+        traceback.print_exc()
+        raise  # propagate so caller can show the real error
 
 
 def save_draft_file(
